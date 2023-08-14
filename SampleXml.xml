@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<FiltersData>
+	<mroot_equipment>
+		<FileData ID="mroot_equipment1"> 
+			<Name>D:\S3DBuilds\CopyBuildToTest\mroot\equipment\Middle\Idl\EquipEntities.Idl</Name>
+			<InnerDependency>x:\shared\idl\automath.idl;m:\refdata\middle\idl\partdef.idl;m:\refdata\middle\idl\smartpartdef.idl;m:\commonschema\middle\idl\syshlpers.idl;m:\commonschema\middle\idl\distribpartportconn.idl;m:\commonschema\middle\idl\foulcheck.idl;m:\commonschema\middle\idl\weightcg.idl;m:\commonapp\middle\idl\symbolservices.idl;m:\commonschema\middle\idl\appconnections.idl;m:\commonschema\middle\idl\occurrenceinsulation.idl;m:\commonapp\middle\idl\sketchcrosssectionentity.idl;m:\commonapp\middle\idl\sketch3dentity.idl;m:\commonschema\middle\idl\efwintegration.idl;m:\equipment\middle\idl\transientflags.idl;m:\commonschema\middle\idl\positionandorientation.idl;m:\commonapp\middle\idl\smartoccurrence.idl;m:\refdata\middle\idl\refdatacommon.idl;m:\commonschema\middle\idl\enumerategraphicchildren.idl</InnerDependency>
+			<OuterDependencyFileID>mroot_equipment2;mroot_equipment3</OuterDependencyFileID>
+		</FileData>
+		<FileData ID="mroot_equipment2">
+			<Name>D:\S3DBuilds\CopyBuildToTest\mroot\equipment\Middle\Include\Idl\NozzleEntities.Idl</Name>
+			<InnerDependency>m:\commonschema\middle\idl\appconnections.idl;m:\commonschema\middle\idl\connectivityschema.idl;m:\commonschema\middle\idl\distribpartportconn.idl;m:\commonschema\middle\idl\foulcheck.idl;m:\commonschema\middle\idl\nozzlefacelets.idl;m:\commonschema\middle\idl\outfittingcrosssectionsfacelets.idl;m:\commonschema\middle\idl\partfacelets.idl;m:\commonschema\middle\idl\positionandorientation.idl;m:\commonschema\middle\idl\refdatacablewayfacelets.idl;m:\commonschema\middle\idl\refdatacablingfacelets.idl;m:\commonschema\middle\idl\refdatahvacfacelets.idl;m:\commonschema\middle\idl\refdatapipingfacelets.idl;x:\middle\idl\imsdobject.idl;x:\middle\idl\imsrelation.idl;x:\middle\query\src\jadocommandinterface\msado15.idl;x:\server\idl\accesscontrolconstants.idl;x:\server\idl\metadata.idl;x:\server\idl\sblentities.idl;x:\shared\idl\automath.idl;x:\shared\idl\corecollections.idl;x:\shared\idl\ielements.idl;x:\shared\idl\version.idl</InnerDependency>
+			<OuterDependencyFileID> </OuterDependencyFileID>
+		</FileData>
+	</mroot_equipment>
+</FiltersData>
