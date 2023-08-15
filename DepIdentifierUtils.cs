@@ -40,7 +40,8 @@ namespace DepIdentifier
             ".wixproj",
             ".wxs",
             ".lst",
-            ".h"
+            ".h",
+            ".idl"
         };
 
 
@@ -260,12 +261,12 @@ namespace DepIdentifier
         public static async Task UpdateTheXmlAttributeIDLPathAsync(string idlFileName, List<string> updatedParsedIdlFilePaths, string filterPath)
         {
             // Update the XML attribute with IDL path information asynchronously
-            if (System.IO.File.Exists(ReversePatcher.m_XMLSFilesListResourceFileDirectoryPath))
+            if (System.IO.File.Exists(m_FilesListXMLPath))
             {
-                await AsyncFileLock.LockAsync(ReversePatcher.m_XMLSFilesListResourceFileDirectoryPath);
+                await AsyncFileLock.LockAsync(m_FilesListXMLPath);
 
                 var xmlDoc = new XmlDocument();
-                xmlDoc.Load(ReversePatcher.m_XMLSFilesListResourceFileDirectoryPath);
+                xmlDoc.Load(m_FilesListXMLPath);
 
                 if (filterPath != null)
                 {
@@ -274,9 +275,9 @@ namespace DepIdentifier
 
                 await UpdateTheXmlAttributeAsync(xmlDoc, filterPath.Replace("\\", "_") + "/FilePath", "Name", idlFileName, "IDL", string.Join(";", updatedParsedIdlFilePaths));
 
-                Utilities.SaveXmlToFile(xmlDoc, ReversePatcher.m_XMLSFilesListResourceFileDirectoryPath);
+                Utilities.SaveXmlToFile(xmlDoc, m_FilesListXMLPath);
 
-                AsyncFileLock.Unlock(ReversePatcher.m_XMLSFilesListResourceFileDirectoryPath);
+                AsyncFileLock.Unlock(m_FilesListXMLPath);
             }
         }
 
@@ -285,7 +286,7 @@ namespace DepIdentifier
         {
             try
             {
-                await AsyncFileLock.LockAsync(ReversePatcher.m_XMLSFilesListResourceFileDirectoryPath);
+                await AsyncFileLock.LockAsync(m_FilesListXMLPath);
 
                 // Get the elements with the specified name and attribute value
                 XmlNodeList filterNodes = xmlDoc.DocumentElement.SelectNodes($"//{elementName}[@{attributeNameToSearch}='{attributeValueToSearch}']");
@@ -299,10 +300,10 @@ namespace DepIdentifier
             catch (Exception ex)
             {
                 Console.WriteLine("Error updating attribute in XML: " + ex.Message);
-            }
+            }   
             finally
             {
-                AsyncFileLock.Unlock(ReversePatcher.m_XMLSFilesListResourceFileDirectoryPath);
+                AsyncFileLock.Unlock(m_FilesListXMLPath);
             }
         }
 
@@ -1158,14 +1159,18 @@ namespace DepIdentifier
         //Need a way to update the folders data to xml either to get it from .pat file or manually check and update
         public static List<string> GetS3DFoldersDataFromXML(string XMLSDirectoryPath)
         {
+
             List<string> s3dFoldersDataList = new List<string>();
-            try
+            if (File.Exists(m_FiltersXMLPath))
             {
-                s3dFoldersDataList = GetXmlData(m_FiltersXMLPath, "DATA/FILTERS", "Name");
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Failed to GetS3DFoldersDataFromXML with exception: " + ex.Message);
+                try
+                {
+                    s3dFoldersDataList = GetXmlData(m_FiltersXMLPath, "DATA/FILTERS", "Name");
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("Failed to GetS3DFoldersDataFromXML with exception: " + ex.Message);
+                }
             }
             return s3dFoldersDataList;
         }

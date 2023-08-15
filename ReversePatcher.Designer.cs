@@ -14,7 +14,7 @@ namespace DepIdentifier
         private static string m_CurrentDirectoryPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(Directory.GetCurrentDirectory(), @"..\..\..\"));
         private string m_XMLSDirectoryPath = m_CurrentDirectoryPath + "resource";
         //private string m_XMLSResourceFileDirectoryPath = m_CurrentDirectoryPath + "resource" + @"\Res.xml";
-        public static string m_XMLSFilesListResourceFileDirectoryPath = m_CurrentDirectoryPath + "resource" + @"\FilesList.xml";
+        //public static string m_XMLSFilesListResourceFileDirectoryPath = m_CurrentDirectoryPath + "resource" + @"\FilesList.xml";
         private List<string> m_SelectedFiles = new List<string>();
         private static List<string> m_DependencyList = new List<string>();
         public List<string> m_failedFileList = new List<string>();
@@ -204,11 +204,14 @@ namespace DepIdentifier
 
         private void LoadFilters()
         {
-            var list = MainDirectoriesInfo = GetXmlData(DepIdentifierUtils.m_FiltersXMLPath, "data/filters", "Name");
-            foreach (var item in list)
+            if (File.Exists(DepIdentifierUtils.m_FiltersXMLPath))
             {
-                FilterCombo.Items.Add(item);
-                m_FiltersList.Add(item);
+                var list = MainDirectoriesInfo = GetXmlData(DepIdentifierUtils.m_FiltersXMLPath, "data/filters", "Name");
+                foreach (var item in list)
+                {
+                    FilterCombo.Items.Add(item);
+                    m_FiltersList.Add(item);
+                }
             }
         }
 

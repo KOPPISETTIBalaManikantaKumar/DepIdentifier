@@ -33,6 +33,9 @@ namespace DepIdentifier
         public static List<string> cachedXrootFiles = new List<string>();
         public static List<string> cachedYrootFiles = new List<string>();
 
+
+        public Dictionary<string, List<string>> m_DependencyDictionary = new Dictionary<string, List<string>>();
+
         public static List<string> GetCachedKrootFiles()
         {
             return cachedKrootFiles;
@@ -67,7 +70,7 @@ namespace DepIdentifier
         }   
 
 
-        private string m_selectedFilterPath = string.Empty;
+        private static string m_selectedFilterPath = string.Empty;
 
         private static List<string> m_filesForWhichDependenciesNeedToBeIdentified = new List<string>();
 
@@ -390,6 +393,7 @@ namespace DepIdentifier
 
         private void GetDependencies_Click(object sender, EventArgs e)
         {
+            m_DependencyDictionary = new Dictionary<string, List<string>>();
             m_filesForWhichDependenciesNeedToBeIdentified.Clear();
             List<string> currentSelectedFilePaths = new List<string>();
             GetCheckedFilePaths(ProjectsTreeView.Nodes, currentSelectedFilePaths);
@@ -403,10 +407,10 @@ namespace DepIdentifier
                 List<string> dependenicesOfCurrentFile = new List<string>();
                 Cursor.Current = Cursors.WaitCursor;
                 string dependentList = string.Empty;
-                if (File.Exists(m_XMLSFilesListResourceFileDirectoryPath))
+                if (File.Exists(DepIdentifierUtils.m_FilesListXMLPath))
                 {
                     var xmlDoc = new XmlDocument();
-                    xmlDoc.Load(m_XMLSFilesListResourceFileDirectoryPath);
+                    xmlDoc.Load(DepIdentifierUtils.m_FilesListXMLPath);
                     string elementName = "filepath";
                     string attributeNameToSearch = "name";
                     string attributeValueToSearch = file.ToLower();
@@ -424,6 +428,7 @@ namespace DepIdentifier
                 {
                     string[] splittedStrings = dependentList.Split(new[] { ";" }, StringSplitOptions.None);
                     m_DependencyList.AddRange(splittedStrings);
+                    m_DependencyDictionary.Add(file, splittedStrings.ToList());
                 }
             }
 
@@ -444,6 +449,54 @@ namespace DepIdentifier
 
             CopyList.Enabled = true;
             CopyList.Visible = true;
+        }
+
+        private void GetFileDependenciesRecursively()
+        {
+            foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
+            {
+                List<string> dependenicesOfCurrentFile = new List<string>();
+                Cursor.Current = Cursors.WaitCursor;
+                string dependentList = GetDependencyDataOfFilesFromXML(file);
+                if (String.IsNullOrEmpty(dependentList))
+                {
+                    string[] filter = file.Split("\\");
+                    string currentFileFilter = filter[1] + "_" + filter[2];
+                    dependenicesOfCurrentFile = DepIdentifierUtils.GetTheFileDependencies(file, currentFileFilter);
+
+                    //Update the xml accordingly
+                }
+                else
+                {
+                    string[] splittedStrings = dependentList.Split(new[] { ";" }, StringSplitOptions.None);
+                    dependenicesOfCurrentFile.AddRange(splittedStrings);
+                    m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
+                }
+            }
+        }
+
+        private static string GetDependencyDataOfFilesFromXML(string file)
+        {
+            string dependentListSemiColonSeperated = string.Empty;
+            try
+            {
+                if (File.Exists(DepIdentifierUtils.m_FilesListXMLPath))
+                {
+                    var xmlDoc = new XmlDocument();
+                    xmlDoc.Load(DepIdentifierUtils.m_FilesListXMLPath);
+                    string elementName = "filepath";
+                    string attributeNameToSearch = "name";
+                    string attributeValueToSearch = file.ToLower();
+                    //dependentList = Utilities.GetNameAttributeValue(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "Name", file);
+                    dependentListSemiColonSeperated = Utilities.GetNameAttributeValue(xmlDoc, m_selectedFilterPath.Replace("\\", "_"), elementName, attributeNameToSearch, attributeValueToSearch);
+                    //dependentList = Utilities.GetNameAttributeValue(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "Name", file);
+                }
+            }
+            catch(Exception ex)
+            {
+                throw new Exception("GetDependencyDataOfFilsFromXML failed with exception " + ex.Message);
+            }
+            return dependentListSemiColonSeperated;
         }
 
         //private void IdentifyIDLDependencies(string idlFileName)
@@ -642,14 +695,14 @@ namespace DepIdentifier
 
         private async Task UpdateTheXmlAttributeIDLPathAsync(string idlFileName, List<string> idlFilePaths)
         {
-            if (System.IO.File.Exists(m_XMLSFilesListResourceFileDirectoryPath))
+            if (System.IO.File.Exists(DepIdentifierUtils.m_FilesListXMLPath))
             {
                 var xmlDoc = new XmlDocument();
-                xmlDoc.Load(m_XMLSFilesListResourceFileDirectoryPath);
+                xmlDoc.Load(DepIdentifierUtils.m_FilesListXMLPath);
 
                 //Utilities.AppendNewAttribute(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "IDL", string.Join(";", m_DependencyList));
                 await DepIdentifierUtils.UpdateTheXmlAttributeAsync(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "Name", idlFileName, "IDL", string.Join(";", idlFilePaths));
-                await Utilities.SaveXmlToFile(xmlDoc, m_XMLSFilesListResourceFileDirectoryPath);
+                await Utilities.SaveXmlToFile(xmlDoc, DepIdentifierUtils.m_FilesListXMLPath);
             }
         }
 
@@ -698,6 +751,7 @@ namespace DepIdentifier
                 stopWatch.Stop();
                 TimeSpan elapsed = stopWatch.Elapsed;
                 MessageBox.Show("Elapsed Time: " + elapsed);
+                LoadFilters();
             }
             catch(Exception ex)
             {
