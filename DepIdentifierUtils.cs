@@ -21,6 +21,8 @@ namespace DepIdentifier
         public static string m_FiltersXMLPath = @"g:\xroot\bldtools\depidentifier\resources\filtersdata.xml";
         public static string m_FilesListXMLPath = @"g:\xroot\bldtools\depidentifier\resources\filesList.xml";
         public static List<string> m_CachedFiltersData = new List<string>();
+
+        public static List<string> Commonfiles = new List<string>{ "ocidl.idl", "atlbase.h", "atlcom.h", "statreg.h" };
         #endregion
         const string m_XMLPath = "D:\\temp\\ProjectFilesInfo.xml";
         private const string m_logFilePath = "D:\\temp\\ProjectFilesData.txt";
@@ -336,12 +338,10 @@ namespace DepIdentifier
                 return false;
         }
 
-        private static bool IsCommonHeaderFile(string filename)
+        private static bool IsCommonFile(string filename)
         {
-            if (filename.Contains("atlbase.h") || filename.Contains("atlcom.h") || filename.Contains("statreg.h"))
-            {
+            if (Commonfiles.Contains(Path.GetFileName(filename)))
                 return true;
-            }
             else
                 return false;
         }
@@ -386,7 +386,7 @@ namespace DepIdentifier
                 foreach (Match match in matches)
                 {
                     string fileName = match.Groups[1].Value;
-                    if (IsValidFilenameWithExtension(fileName) && !IsCommonHeaderFile(fileName))
+                    if (IsValidFilenameWithExtension(fileName) && !IsCommonFile(fileName))
                         dependentFiles.Add(fileName);
                 }
             }
@@ -483,10 +483,20 @@ namespace DepIdentifier
             return resolvedList;
         }
 
+        static bool IsFileUnderDirectory(string directoryPath, string filePath)
+        {
+            string fullPath = Path.GetFullPath(filePath);
+            string fullDirectoryPath = Path.GetFullPath(directoryPath);
+
+            return fullPath.StartsWith(fullDirectoryPath, StringComparison.OrdinalIgnoreCase);
+        }
+
         private static List<string> FindVBPFileDependencies(string vbpFilePath)
         {
-            List<string> dependencies = new List<string>();
-
+            List<string> vbpDependencies = new List<string>();
+            List<string> classDependencies = new List<string>();
+            List<string> moduleDependencies = new List<string>();
+            string m_DirectoryRoot = ReversePatcher.GetCurrentFilterFromFilePath(vbpFilePath);
             try
             {
                 // Read all lines from the .vbp file
@@ -494,11 +504,65 @@ namespace DepIdentifier
 
                 foreach (string line in lines)
                 {
+                    string vbpDirectory = Path.GetDirectoryName(vbpFilePath) + "\\";
                     if (line.StartsWith("Class=") || line.StartsWith("Module="))
                     {
                         // Extract the component path from the line
                         string componentPath = line.Split(';')[1].TrimStart();
-                        dependencies.Add(componentPath);
+                        if (componentPath.Contains("..") || componentPath.Contains("\\"))
+                        {
+
+                            string fullPath = Path.Combine(vbpDirectory, componentPath);
+                            if (File.Exists(fullPath))
+                            {
+                                fullPath = Path.GetFullPath(fullPath);
+                                if (!IsFileUnderDirectory(m_DirectoryRoot, fullPath))
+                                {
+                                    classDependencies.Add(ChangeToClonedPathFromVirtual(fullPath));
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //Do nothing since the file will be in the same directory..
+                        }
+                    }
+
+                    if (line.StartsWith("Module="))
+                    {
+                        // Extract the component path from the line
+                        string componentPath = line.Split(';')[1].TrimStart();
+                        if (componentPath.StartsWith("..")) //Like ..\..\..\..\Xroot\Container\Include\CoreTraderKeys.bas
+                        {
+                            string resolvedPath = Path.Combine(vbpDirectory, componentPath);
+                            if (File.Exists(resolvedPath))
+                            {
+                                string fullPath = Path.GetFullPath(resolvedPath);
+                                if (!IsFileUnderDirectory(m_DirectoryRoot, fullPath))
+                                    moduleDependencies.Add(ChangeToClonedPathFromVirtual(fullPath));
+                            }
+                            else
+                            {
+                                Console.WriteLine($"Unable to resolve path for {resolvedPath}");
+                            }
+                        }
+                        else if (!componentPath.StartsWith("..") && componentPath.Contains("\\")) //Like M:\Equipment\Middle\Include\Constants.bas or
+                                                                                                  //L10N\Include\L10NInsertComponentCmds.bas
+                        {
+                            if (componentPath.Contains(":"))
+                            {
+                                if (!IsFileUnderDirectory(m_DirectoryRoot, componentPath))
+                                    moduleDependencies.Add(ChangeToClonedPathFromVirtual(componentPath));
+                            }
+                            else
+                            {
+                                //Do Nothing
+                            }
+                        }
+                        else //Like ArgumentKey.bas
+                        {
+                            //Do nothing since the file will be in the same directory..
+                        }
                     }
                 }
             }
@@ -507,27 +571,29 @@ namespace DepIdentifier
                 throw new Exception($"Failed to FindVBPFileDependencies for the '{vbpFilePath}' with exception: " + ex.Message);
             }
 
-            return dependencies;
+            vbpDependencies.AddRange(classDependencies);
+            vbpDependencies.AddRange(moduleDependencies);
+            return vbpDependencies;
         }
 
         private static List<string> FindVBPDependenciesAndAddToXml(string filePath, string folder, string filtersXMLPath)
         {
-            List<string> resolvedList = new List<string>();
+            List<string> dependenciesList = new List<string> ();
             try
             {
-                List<string> dependenciesList = FindVBPFileDependencies(filePath);
+                dependenciesList = FindVBPFileDependencies(filePath);
                 if (dependenciesList != null && dependenciesList.Count > 0)
                 {
-                    resolvedList = ResolveFromLocalDirectoryOrPatcher(filePath, dependenciesList, fromPatcher: true);
+                    //resolvedList = ResolveFromLocalDirectoryOrPatcher(filePath, dependenciesList, fromPatcher: true);
 
-                    UpdateTheXmlAttributeDependenciesPath(filePath, resolvedList, folder, filtersXMLPath);
+                    UpdateTheXmlAttributeDependenciesPath(filePath, dependenciesList, folder, filtersXMLPath);
                 }
             }
             catch (Exception ex)
             {
                 throw new Exception($"Failed to FindVBPDependenciesAndAddToXml for the '{filePath}' with exception: {ex.Message}");
             }
-            return resolvedList;
+            return dependenciesList;
         }
 
         private static List<string> FindDependenciesInCsprojFiles(string csprojFilePath)
@@ -662,9 +728,9 @@ namespace DepIdentifier
                 foreach (Match match in matches)
                 {
                     string importedFile = match.Groups[1].Value;
-                    importedFiles.Add(importedFile);
+                    if(!IsCommonFile(importedFile))
+                        importedFiles.Add(importedFile);
                 }
-
             }
             catch (Exception ex)
             {
@@ -961,7 +1027,7 @@ namespace DepIdentifier
         {
             try
             {
-                await ReadFilesAsync(m_AllS3DDirectoriesFilePath);
+                //await ReadFilesAsync(m_AllS3DDirectoriesFilePath);
 
                 List<string> matchingFiles = await SearchMatchingFilesAsync(searchString);
 
@@ -1078,7 +1144,7 @@ namespace DepIdentifier
                     dependencyFiles = dependencyFiles + file + ";";
                 }
                 //Utilities.AppendNewAttribute(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "IDL", string.Join(";", m_DependencyList));
-                UpdateTheXmlAttribute(xmlDoc, folder.Replace("\\", "_") + "/FilePath", "Name", filePath, "Dependency", string.Join(";", dependencyFiles));
+                UpdateTheXmlAttribute(xmlDoc, folder.Replace("\\", "_") + "/filePath", "Name", filePath, "Dependency", string.Join(";", dependencyFiles));
                 Utilities.SaveXmlToFile(xmlDoc, filtersXMLPath);
             }
         }
@@ -1102,22 +1168,38 @@ namespace DepIdentifier
             {
                 string searchPath = attributeValueToSearch.Replace(@"\\", @"\");
                 // Get the elements with the specified name and attribute value
-                XmlNodeList filterNodes = xmlDoc.DocumentElement.SelectNodes($"//{elementName}[@{attributeNameToSearch}='{searchPath}']");
+                //XmlNodeList filterNodes = xmlDoc.DocumentElement.SelectNodes($"//{elementName}[@{attributeNameToSearch}='{searchPath}']");
 
-                foreach (XmlElement element in filterNodes)
+                XmlNode xmlNode = xmlDoc.SelectSingleNode("//filepath[@Name='" + attributeNameToUpdate + "']");
+
+                if(xmlNode != null )
                 {
-                    string currentValue = element.GetAttribute(attributeNameToUpdate);
-                    string updatedValue;
-                    if (currentValue != attributeValueToUpdate && currentValue != string.Empty)
+                    var xmlElement = xmlNode as XmlElement;
+                    if(xmlElement != null )
                     {
-                        updatedValue = currentValue + attributeValueToUpdate;
+                        XmlAttribute xmlAttribute = xmlElement.GetAttributeNode("Dependency");
+                        if(xmlAttribute == null)
+                        {
+                            xmlElement.SetAttribute("Dependency", attributeValueToUpdate);
+                        }
+                        else
+                            xmlAttribute.Value = attributeValueToUpdate;
                     }
-                    else
-                        updatedValue = attributeValueToUpdate;
-
-                    // Update the attribute value
-                    element.SetAttribute(attributeNameToUpdate, updatedValue);
                 }
+                //foreach (XmlElement element in filterNodes)
+                //{
+                //    string currentValue = element.GetAttribute(attributeNameToUpdate);
+                //    string updatedValue;
+                //    if (currentValue != attributeValueToUpdate && currentValue != string.Empty)
+                //    {
+                //        updatedValue = currentValue + attributeValueToUpdate;
+                //    }
+                //    else
+                //        updatedValue = attributeValueToUpdate;
+
+                //    // Update the attribute value
+                //    element.SetAttribute(attributeNameToUpdate, updatedValue);
+                //}
             }
             catch (Exception ex)
             {
@@ -1414,10 +1496,22 @@ namespace DepIdentifier
                             // Create a new element and add it to the root
                             XmlElement newElement = xmlDoc.CreateElement(currentElementName);
                             newElement.SetAttribute("Name", str);
+                            if(File.Exists(str))
+                                newElement.SetAttribute("ShortName", Path.GetFileName(str));
                             rootElement.AppendChild(newElement);
                         }
+                        else 
+                        {
+                            if (File.Exists(str))
+                            {
+                                XmlAttribute xmlNode = existingElement.GetAttributeNode("ShortName");
+                                if (xmlNode == null)
+                                {
+                                    existingElement.SetAttribute("ShortName", Path.GetFileName(str));
+                                }
+                            }
+                        }
                         // If the element exists, you can choose to do something here
-
                     }
                 }
 
@@ -1541,6 +1635,10 @@ namespace DepIdentifier
                     List<string> cachedRootList = DepIdentifierUtils.GetSpecificCachedRootList(virtualDrive + "root");
                     cachedRootList = ConvertToStringList(stringBuilder.ToString());
 
+                    if(File.Exists(virtualDriveFilePath))
+                    {
+                        File.Delete(virtualDriveFilePath);
+                    }
                     await File.WriteAllTextAsync(virtualDriveFilePath, stringBuilder.ToString());
                 }
 
@@ -1587,6 +1685,11 @@ namespace DepIdentifier
         // Function to get the virtual drive from a given path
         static string ChangeToClonedPathFromVirtual(string path)
         {
+
+            if (path.StartsWith("g:", StringComparison.OrdinalIgnoreCase))
+                return path;
+
+            path = path.ToLower();
             int colonIndex = path.IndexOf(":");
             //int lastBackslashIndex = path.LastIndexOf('\\');
             if (colonIndex >= 0)
@@ -1650,11 +1753,8 @@ namespace DepIdentifier
 
         public static List<string> GetSpecificCachedRootList(string filterPath)
         {
-            if(ReversePatcher.cachedMrootFiles.Count == 0)
-            {
-                ReversePatcher.CacheAllRootFiles();
-                
-            }
+            ReversePatcher.CacheAllRootFiles();
+
             if (filterPath.Contains("mroot"))
             {
                 return ReversePatcher.GetCachedMrootFiles();

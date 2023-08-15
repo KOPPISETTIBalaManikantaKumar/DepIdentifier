@@ -520,7 +520,7 @@ namespace DepIdentifier
         }
 
 
-        public static string GetNameAttributeValue(XmlDocument xmlDoc, string parentElementName, string elementName, string attributeNameToSearch, string attributeValueToSearch)
+        public static string GetDependecyStringFromXML(XmlDocument xmlDoc, string parentElementName, string elementName, string attributeNameToSearch, string attributeValueToSearch)
         {
             try
             {
@@ -534,7 +534,7 @@ namespace DepIdentifier
                 {
                     // Get the "name" attribute value of the first matching element
                     XmlElement element = (XmlElement)filterNodes[0];
-                    string nameValue = element.GetAttribute("dependency");
+                    string nameValue = element.GetAttribute("Dependency");
                     return nameValue;
                 }
                 else

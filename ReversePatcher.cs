@@ -393,6 +393,8 @@ namespace DepIdentifier
 
         private void GetDependencies_Click(object sender, EventArgs e)
         {
+            SelectedFilesListBox.Items.Clear();
+            DependenciesList.Items.Clear();
             m_DependencyDictionary = new Dictionary<string, List<string>>();
             m_filesForWhichDependenciesNeedToBeIdentified.Clear();
             List<string> currentSelectedFilePaths = new List<string>();
@@ -402,22 +404,16 @@ namespace DepIdentifier
 
             SelectedFilesListBox.Items.AddRange(m_filesForWhichDependenciesNeedToBeIdentified.ToArray());
 
+            Console.WriteLine($"Selected files count: {m_filesForWhichDependenciesNeedToBeIdentified.Count}");
+            int counter = 0;
             foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
             {
+                counter++;
+                Console.WriteLine($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count}");
                 List<string> dependenicesOfCurrentFile = new List<string>();
                 Cursor.Current = Cursors.WaitCursor;
                 string dependentList = string.Empty;
-                if (File.Exists(DepIdentifierUtils.m_FilesListXMLPath))
-                {
-                    var xmlDoc = new XmlDocument();
-                    xmlDoc.Load(DepIdentifierUtils.m_FilesListXMLPath);
-                    string elementName = "filepath";
-                    string attributeNameToSearch = "name";
-                    string attributeValueToSearch = file.ToLower();
-                    //dependentList = Utilities.GetNameAttributeValue(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "Name", file);
-                    dependentList = Utilities.GetNameAttributeValue(xmlDoc, m_selectedFilterPath.Replace("\\", "_"), elementName, attributeNameToSearch, attributeValueToSearch);
-                    //dependentList = Utilities.GetNameAttributeValue(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "Name", file);
-                }
+                dependentList = GetDependencyDataOfFilesFromXML(file);
                 if (String.IsNullOrEmpty(dependentList))
                 {
                     dependenicesOfCurrentFile = DepIdentifierUtils.GetTheFileDependencies(file, m_selectedFilterPath);
@@ -427,23 +423,20 @@ namespace DepIdentifier
                 else
                 {
                     string[] splittedStrings = dependentList.Split(new[] { ";" }, StringSplitOptions.None);
-                    m_DependencyList.AddRange(splittedStrings);
-                    m_DependencyDictionary.Add(file, splittedStrings.ToList());
+                    dependenicesOfCurrentFile.AddRange(splittedStrings);
                 }
+                m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
+                GetFileDependenciesRecursively(dependenicesOfCurrentFile);
             }
-
-            DependenciesList.Items.Clear();
-            if (m_DependencyList.Count == 0)
+            
+            foreach (var keys in m_DependencyDictionary.Keys)
             {
-                DependenciesList.Items.Add("No Dependencies.");
+                List<string> dependenciesOfCurrentKey = new List<string>();
+                m_DependencyDictionary.TryGetValue(keys, out dependenciesOfCurrentKey);
+                DependenciesList.Items.AddRange(dependenciesOfCurrentKey.ToArray());
             }
-            else
-            {
-                foreach (var dependentFile in m_DependencyList)
-                {
-                    DependenciesList.Items.Add(dependentFile);
-                }
-            }
+            if (DependenciesList.Items.Count == 0)
+                DependenciesList.Items.Add("No Dependencies");
 
             Cursor.Current = Cursors.Default;
 
@@ -451,17 +444,20 @@ namespace DepIdentifier
             CopyList.Visible = true;
         }
 
-        private void GetFileDependenciesRecursively()
+        private void GetFileDependenciesRecursively(List<string> m_filesForWhichDependenciesNeedToBeIdentified)
         {
+            List<string> currentListOfFilesDependencies = new List<string>();
             foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
             {
+                if (m_DependencyDictionary.ContainsKey(file))
+                    continue;
+
+
                 List<string> dependenicesOfCurrentFile = new List<string>();
-                Cursor.Current = Cursors.WaitCursor;
                 string dependentList = GetDependencyDataOfFilesFromXML(file);
                 if (String.IsNullOrEmpty(dependentList))
                 {
-                    string[] filter = file.Split("\\");
-                    string currentFileFilter = filter[1] + "_" + filter[2];
+                    string currentFileFilter = GetCurrentFilterFromFilePath(file);
                     dependenicesOfCurrentFile = DepIdentifierUtils.GetTheFileDependencies(file, currentFileFilter);
 
                     //Update the xml accordingly
@@ -470,11 +466,28 @@ namespace DepIdentifier
                 {
                     string[] splittedStrings = dependentList.Split(new[] { ";" }, StringSplitOptions.None);
                     dependenicesOfCurrentFile.AddRange(splittedStrings);
-                    m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
+                    currentListOfFilesDependencies.AddRange(dependenicesOfCurrentFile);
                 }
+                m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
+
+                if (dependenicesOfCurrentFile.Count > 0)
+                    GetFileDependenciesRecursively(dependenicesOfCurrentFile);
             }
         }
-
+            
+        public static string GetCurrentFilterFromFilePath(string file)
+        {
+            try
+            {
+                string[] filter = file.Split("\\");
+                string currentFileFilter = filter[1] + "_" + filter[2];
+                return currentFileFilter;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
         private static string GetDependencyDataOfFilesFromXML(string file)
         {
             string dependentListSemiColonSeperated = string.Empty;
@@ -485,10 +498,10 @@ namespace DepIdentifier
                     var xmlDoc = new XmlDocument();
                     xmlDoc.Load(DepIdentifierUtils.m_FilesListXMLPath);
                     string elementName = "filepath";
-                    string attributeNameToSearch = "name";
+                    string attributeNameToSearch = "Name";
                     string attributeValueToSearch = file.ToLower();
                     //dependentList = Utilities.GetNameAttributeValue(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "Name", file);
-                    dependentListSemiColonSeperated = Utilities.GetNameAttributeValue(xmlDoc, m_selectedFilterPath.Replace("\\", "_"), elementName, attributeNameToSearch, attributeValueToSearch);
+                    dependentListSemiColonSeperated = Utilities.GetDependecyStringFromXML(xmlDoc, m_selectedFilterPath.Replace("\\", "_"), elementName, attributeNameToSearch, attributeValueToSearch);
                     //dependentList = Utilities.GetNameAttributeValue(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "Name", file);
                 }
             }
