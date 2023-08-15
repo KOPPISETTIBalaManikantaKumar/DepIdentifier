@@ -144,7 +144,7 @@ namespace DepIdentifier
                 //}
                 List<string> filesList = new List<string>();
 
-                filesList = GetAllFilesFromSelectedRoot(DepIdentifierUtils.GetSpecificCachedRootList(m_selectedFilterPath), Utilities.GetClonedRepo() + m_selectedFilterPath);
+                filesList = GetAllFilesFromSelectedRoot(DepIdentifierUtils.GetSpecificCachedRootList(m_selectedFilterPath), m_selectedFilterPath);
 
 
                 //Fill the tree nodes
