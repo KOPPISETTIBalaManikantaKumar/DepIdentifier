@@ -45,6 +45,7 @@ namespace DepIdentifier
             menuStrip1 = new MenuStrip();
             fileToolStripMenuItem = new ToolStripMenuItem();
             toolsToolStripMenuItem = new ToolStripMenuItem();
+            generatePrerequisiteFilesToolStripMenuItem = new ToolStripMenuItem();
             helpToolStripMenuItem = new ToolStripMenuItem();
             FilterCombo = new ComboBox();
             DependenciesList = new ListBox();
@@ -52,7 +53,7 @@ namespace DepIdentifier
             CopyList = new Button();
             ProjectsTreeView = new TreeView();
             SelectedFilesListBox = new ListBox();
-            generatePrerequisiteFilesToolStripMenuItem = new ToolStripMenuItem();
+            Recompute = new CheckBox();
             menuStrip1.SuspendLayout();
             SuspendLayout();
             // 
@@ -78,6 +79,13 @@ namespace DepIdentifier
             toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
             toolsToolStripMenuItem.Size = new Size(46, 20);
             toolsToolStripMenuItem.Text = "Tools";
+            // 
+            // generatePrerequisiteFilesToolStripMenuItem
+            // 
+            generatePrerequisiteFilesToolStripMenuItem.Name = "generatePrerequisiteFilesToolStripMenuItem";
+            generatePrerequisiteFilesToolStripMenuItem.Size = new Size(217, 22);
+            generatePrerequisiteFilesToolStripMenuItem.Text = "Generate Pre-requisite Files";
+            generatePrerequisiteFilesToolStripMenuItem.Click += generatePrerequisiteFilesToolStripMenuItem_Click;
             // 
             // helpToolStripMenuItem
             // 
@@ -145,18 +153,22 @@ namespace DepIdentifier
             SelectedFilesListBox.Size = new Size(513, 214);
             SelectedFilesListBox.TabIndex = 10;
             // 
-            // generatePrerequisiteFilesToolStripMenuItem
+            // Recompute
             // 
-            generatePrerequisiteFilesToolStripMenuItem.Name = "generatePrerequisiteFilesToolStripMenuItem";
-            generatePrerequisiteFilesToolStripMenuItem.Size = new Size(217, 22);
-            generatePrerequisiteFilesToolStripMenuItem.Text = "Generate Pre-requisite Files";
-            generatePrerequisiteFilesToolStripMenuItem.Click += generatePrerequisiteFilesToolStripMenuItem_Click;
+            Recompute.AutoSize = true;
+            Recompute.Location = new Point(252, 28);
+            Recompute.Name = "Recompute";
+            Recompute.Size = new Size(169, 19);
+            Recompute.TabIndex = 11;
+            Recompute.Text = "Re-compute Dependencies";
+            Recompute.UseVisualStyleBackColor = true;
             // 
             // ReversePatcher
             // 
             AutoScaleMode = AutoScaleMode.None;
             AutoScroll = true;
             ClientSize = new Size(1098, 810);
+            Controls.Add(Recompute);
             Controls.Add(SelectedFilesListBox);
             Controls.Add(ProjectsTreeView);
             Controls.Add(CopyList);
@@ -253,5 +265,6 @@ namespace DepIdentifier
         private TreeView ProjectsTreeView;
         private ListBox SelectedFilesListBox;
         private ToolStripMenuItem generatePrerequisiteFilesToolStripMenuItem;
+        private CheckBox Recompute;
     }
 }
