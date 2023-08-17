@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.Windows.Forms;
 using System.Collections;
+using System.Security.Cryptography;
 
 namespace DepIdentifier
 {
@@ -24,7 +25,7 @@ namespace DepIdentifier
         public static string m_FilesListXMLPath = @"g:\xroot\bldtools\depidentifier\resources\filesList.xml";
         public static List<string> m_CachedFiltersData = new List<string>();
 
-        public static List<string> Commonfiles = new List<string>{ "oaidl.idl", "ocidl.idl", "atlbase.h", "atlcom.h", "statreg.h" };
+        public static List<string> Commonfiles = new List<string> { "oaidl.idl", "ocidl.idl", "atlbase.h", "atlcom.h", "statreg.h", "wtypes.idl", "comdef.h", "math.h", "initguid.h", "objbase.h", "share.h" };
         #endregion
         const string m_XMLPath = "D:\\temp\\ProjectFilesInfo.xml";
         private const string m_logFilePath = "D:\\temp\\ProjectFilesData.txt";
@@ -304,7 +305,7 @@ namespace DepIdentifier
             catch (Exception ex)
             {
                 Console.WriteLine("Error updating attribute in XML: " + ex.Message);
-            }   
+            }
             finally
             {
                 AsyncFileLock.Unlock(m_FilesListXMLPath);
@@ -388,7 +389,7 @@ namespace DepIdentifier
                 foreach (Match match in matches)
                 {
                     string fileName = match.Groups[1].Value;
-                    if (IsValidFilenameWithExtension(fileName) && !IsCommonFile(fileName))
+                    if (IsValidFilenameWithExtension(fileName) && !IsCommonFile(fileName) && !fileName.EndsWith("_i.c", StringComparison.OrdinalIgnoreCase))
                         dependentFiles.Add(fileName);
                 }
             }
@@ -494,12 +495,46 @@ namespace DepIdentifier
                 List<string> paths = includeDirs.Split(';')
                                           .Select(path => path.Trim())  // Remove leading/trailing spaces
                                           .Select(path => path.Replace("%(AdditionalIncludeDirectories)", ""))
-                                          .Distinct(StringComparer.OrdinalIgnoreCase)  // Remove duplicates
                                           .ToList();
 
-                includeDirs = string.Join(";", paths);
+
+                HashSet<string> uniquePathsSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                List<string> uniquePathsList = new List<string>();
+
+                foreach (string path in paths)
+                {
+                    if (uniquePathsSet.Add(path)) // Add returns true if the path is unique
+                    {
+                        uniquePathsList.Add(path);
+                    }
+                }
+
+
+                includeDirs = string.Join(";", uniquePathsList);
             }
             return includeDirs;
+        }
+
+        public static List<string> FindPropsFileDependenciesInVcxprojFiles(string vcxprojFilePath)
+        {
+            List<string> dependencies = new List<string>();
+            if (vcxprojFilePath != null)
+            {
+                try
+                {
+                    // Load the .vcxproj file
+                    XDocument doc = XDocument.Load(vcxprojFilePath);
+
+                    dependencies.AddRange(doc.Descendants(XName.Get("Import", "http://schemas.microsoft.com/developer/msbuild/2003")).Select(e => e.Attribute("Project")?.Value).Where(value => value != null));
+
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"Failed to FindDependenciesInVcxprojFiles for the file '{vcxprojFilePath}' with exception: '{ex.Message}'");
+                }
+
+            }
+            return dependencies;
         }
 
         private static List<string> FindVcxprojDependenciesAndAddToXml(string filePath, string folder, string filtersXMLPath)
@@ -508,7 +543,21 @@ namespace DepIdentifier
             try
             {
                 List<string> dependenciesList = FindDependenciesInVcxprojFiles(filePath);
-                string additionalIncludeDirs = AdditionalIncludeDirectoriesOfVCXproj(filePath);
+                List<string> propsDependencies = FindPropsFileDependenciesInVcxprojFiles(filePath);
+
+                string additionalIncludeDirs = string.Empty;
+                propsDependencies = ResolveFromLocalDirectoryOrPatcher(projectFilePath: filePath, propsDependencies, false);
+                foreach (string propFileDependency in propsDependencies)
+                {
+                    additionalIncludeDirs = additionalIncludeDirs + FindAdditionalIncludeDirectorisInAPropFile(propFileDependency, folder, filtersXMLPath);
+                }
+                //props file
+                
+
+
+                additionalIncludeDirs = additionalIncludeDirs + AdditionalIncludeDirectoriesOfVCXproj(filePath);
+
+                additionalIncludeDirs = string.Join(";", GeAdditionalDirectoriesInList(additionalIncludeDirs, filePath));
 
                 XmlDocument xmlDoc = new XmlDocument();
                 xmlDoc.Load(m_FilesListXMLPath);
@@ -532,9 +581,9 @@ namespace DepIdentifier
 
         private static void UpdateProjectNameForTheFilesUnderVCXProj(XmlDocument xmlDoc, List<string> dependenciesList, string attributeValueToSearch, string projectName)
         {
-            foreach(var filepath in dependenciesList)
+            foreach (var filepath in dependenciesList)
             {
-                UpdateTheXmlAttribute(xmlDoc, "/filepath", "Name", filepath, attributeValueToSearch, projectName);
+                UpdateTheXmlAttribute(xmlDoc, "filepath", "Name", filepath, attributeValueToSearch, projectName);
             }
             Utilities.SaveXmlToFile(xmlDoc, m_FilesListXMLPath);
         }
@@ -634,7 +683,7 @@ namespace DepIdentifier
 
         private static List<string> FindVBPDependenciesAndAddToXml(string filePath, string folder, string filtersXMLPath)
         {
-            List<string> dependenciesList = new List<string> ();
+            List<string> dependenciesList = new List<string>();
             try
             {
                 dependenciesList = FindVBPFileDependencies(filePath);
@@ -734,18 +783,63 @@ namespace DepIdentifier
                 //{
                 //    //dependentFiles = FindRCDependenciesAndAddToXml(filePath, folder, filtersXMLPath);
                 //    dependentFiles = FindCppDependenciesAndAddtoXml(filePath, folder, filtersXMLPath);
+
+                //else if (filePath.Contains(".props"))
+                //{
+                //    dependentFiles = FindAdditionalIncludeDirectorisInPropFileAndUpdateInXML(filePath, folder, filtersXMLPath);
+
+                //    foreach (var file in dependentFiles)
+                //    {
+                //        GeAdditionalDirectoriesInList(file, file);
+                //    // call to update xml
+                //    }
                 //}
                 else
                 {
                     //No dependent files
                 }
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
                 Console.WriteLine("Unable to get Dependencies for " + filePath + " with exception " + ex.Message);
             }
             return dependentFiles;
         }
+
+        private static string FindAdditionalIncludeDirectorisInAPropFile(string filePath, string folder, string filtersXMLPath)
+        {
+            List<string> additionalIncludeDirectories = new List<string>();
+            if(File.Exists(filePath))
+            {
+                // Load the .vcxproj file
+                XDocument xDoc = XDocument.Load(filePath);
+
+                // Find references to other C++ projects within the same solution
+                //dependencies.AddRange(doc.Descendants("ProjectReference").Select(e => e.Attribute("Include")?.Value).Where(value => value != null));
+
+                //// Find references to library files
+                //dependencies.AddRange(doc.Descendants("Library").Select(e => e.Attribute("Include")?.Value).Where(value => value != null));
+
+                //// Find references to .NET Framework assemblies
+                //dependencies.AddRange(doc.Descendants("Reference").Select(e => e.Attribute("Include")?.Value).Where(value => value != null));
+
+                // Find references to idl files
+                XNamespace ns = "http://schemas.microsoft.com/developer/msbuild/2003";
+
+                additionalIncludeDirectories.Add(xDoc.Descendants(ns + "ClCompile")
+                                                        .Elements(ns + "AdditionalIncludeDirectories")
+                                                        .Select(element => element.Value)
+                                                        .FirstOrDefault());
+
+                additionalIncludeDirectories.Add(xDoc.Descendants(ns + "ResourceCompile")
+                                                            .Elements(ns + "AdditionalIncludeDirectories")
+                                                            .Select(element => element.Value)
+                                                            .FirstOrDefault());
+
+            }
+            return string.Join(";", additionalIncludeDirectories);
+        }
+
         private static List<string> FindIDLDependenciesAndAddToXml(string filePath, string folder)
         {
             List<string> parsedIdlFilePaths = FindIDLDependencies(filePath, folder);
@@ -806,7 +900,23 @@ namespace DepIdentifier
             string localDirectory = Path.GetDirectoryName(projectFilePath);
             foreach (var dependentFile in dependenciesList)
             {
-                string combinedPath = Path.Combine(localDirectory, dependentFile);
+                if(File.Exists(dependentFile))
+                {
+                    if (dependentFile.StartsWith("g:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        resolvedList.Add(dependentFile);
+                        continue;
+                    }
+                    else
+                        resolvedList.Add(ChangeToClonedPathFromVirtual(dependentFile, projectFilePath));
+                }
+                string combinedPath = Path.Combine(localDirectory, dependentFile.Replace("$(ClonedRepo)", "g:\\"));
+                if (File.Exists(combinedPath))
+                {
+                    resolvedList.Add(combinedPath);
+                    continue;
+                }
+               
                 if (combinedPath.Contains(".."))
                 {
                     combinedPath = Path.GetFullPath(combinedPath);
@@ -851,6 +961,9 @@ namespace DepIdentifier
         {
             List<string> importedFiles = GetImportedFiles(fileName);
 
+            if (importedFiles.Count == 0)
+                return importedFiles;
+
             //DisplayList(importedFiles, "Imported files:");
 
             //Resolved Imported files
@@ -858,7 +971,10 @@ namespace DepIdentifier
             xmlDocument.Load(m_FilesListXMLPath);
 
             string projectName = GetAttributeOfFilePathFromXML(xmlDocument, "Project", fileName);
-            string additionalIncludeDirectories = GetAttributeOfFilePathFromXML(xmlDocument, "AdditionalIncludeDirectories", projectName);
+            string additionalIncludeDirectories = "";
+            if (projectName != null || projectName != "")
+                additionalIncludeDirectories = GetAttributeOfFilePathFromXML(xmlDocument, "AdditionalIncludeDirectories", projectName);
+
 
             List<string> idlFilePaths = ResolveFromLocalDirectoryOrPatcher(fileName, importedFiles, fromPatcher: true, additionalIncludeDirectories: additionalIncludeDirectories);
             return idlFilePaths;
@@ -867,14 +983,21 @@ namespace DepIdentifier
 
         private static string GetAttributeOfFilePathFromXML(XmlDocument xmlDocument, string attributeName, string fileName)
         {
-            string currentFilter = ReversePatcher.GetCurrentFilterFromFilePath(fileName);
-            XmlNode xmlNode = xmlDocument.SelectSingleNode($"//{currentFilter}/filepath[@Name='{fileName.ToLower()}']");
-
-            if (xmlNode != null)
+            try
             {
-                XmlElement xmlElement = xmlNode as XmlElement;
-                if (xmlElement != null)
-                    return xmlElement.GetAttribute(attributeName);
+                string currentFilter = ReversePatcher.GetCurrentFilterFromFilePath(fileName).ToLower();
+                XmlNode xmlNode = xmlDocument.SelectSingleNode($"//{currentFilter}/filepath[@Name='{fileName.ToLower()}']");
+
+                if (xmlNode != null)
+                {
+                    XmlElement xmlElement = xmlNode as XmlElement;
+                    if (xmlElement != null)
+                        return xmlElement.GetAttribute(attributeName);
+                }
+            }
+            catch (Exception ex)
+            {
+                //
             }
             return string.Empty;
         }
@@ -1019,7 +1142,9 @@ namespace DepIdentifier
         {
             foreach (var additionalIncludeDirectory in directoryPath)
             {
-                if (string.Compare(Path.GetFullPath(additionalIncludeDirectory), Path.GetFullPath(filePath), StringComparison.OrdinalIgnoreCase) == 0)
+                string folderPathFromAdditionIncludeDir = Path.GetFullPath(additionalIncludeDirectory);
+                string filefolder = Path.GetDirectoryName(filePath);
+                if (string.Compare(folderPathFromAdditionIncludeDir, filefolder, StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     return filePath;
                 }
@@ -1086,6 +1211,12 @@ namespace DepIdentifier
                         }
                         if(matchFound == false)
                         {
+                            MessageBox.Show("Issue");
+                            Console.WriteLine("match not found and multiple files are identified as dependencies. ");
+                            foreach(var duplicateDep in unresolvedMultipleFiles)
+                            {
+                                Console.WriteLine(duplicateDep);
+                            }
                             allMatchingFiles.AddRange(unresolvedMultipleFiles);
                         }
                     }
@@ -1108,8 +1239,8 @@ namespace DepIdentifier
                 
                 for(int i = 0; i< list.Count;i++)
                 {
-                    list[i] = list[i].Replace("$(ClonedRepo)", "");
-                    if (list[i].StartsWith(".."))
+                    list[i] = list[i].Replace("$(ClonedRepo)", "g:\\");
+                    if (list[i].Contains("..") || list[i].Contains(".\\"))
                     {
                         string resolvedPath = Path.Combine(Path.GetDirectoryName(projectFilePath), list[i]);
                         if (Directory.Exists(resolvedPath))
@@ -1117,6 +1248,9 @@ namespace DepIdentifier
                             list[i] = Path.GetFullPath(resolvedPath);
                         }
                     }
+                    if (list[i].Contains("root\\"))
+                        continue;
+                    
                     list[i] = ChangeToClonedPathFromVirtual(list[i]);
                 }
 
@@ -1354,7 +1488,7 @@ namespace DepIdentifier
                 // Get the elements with the specified name and attribute value
                 //XmlNodeList filterNodes = xmlDoc.DocumentElement.SelectNodes($"//{elementName}[@{attributeNameToSearch}='{searchPath}']");
 
-                XmlNode xmlNode = xmlDoc.SelectSingleNode($"//{elementName}[@Name='" + attributeValueToSearch + "']");
+                XmlNode xmlNode = xmlDoc.SelectSingleNode($"//{elementName}[@Name='" + attributeValueToSearch.ToLower() + "']");
 
                 if(xmlNode != null )
                 {
@@ -1364,10 +1498,10 @@ namespace DepIdentifier
                         XmlAttribute xmlAttribute = xmlElement.GetAttributeNode(attributeNameToUpdate);
                         if(xmlAttribute == null)
                         {
-                            xmlElement.SetAttribute(attributeNameToUpdate, attributeValueToUpdate);
+                            xmlElement.SetAttribute(attributeNameToUpdate, attributeValueToUpdate.ToLower());
                         }
                         else
-                            xmlAttribute.Value = attributeValueToUpdate;
+                            xmlAttribute.Value = attributeValueToUpdate.ToLower();
                     }
                 }
                 //foreach (XmlElement element in filterNodes)
@@ -1387,6 +1521,7 @@ namespace DepIdentifier
             }
             catch (Exception ex)
             {
+                MessageBox.Show("Issue1");
                 Console.WriteLine("Error updating attribute in XML: " + ex.Message);
             }
         }
@@ -1867,13 +2002,29 @@ namespace DepIdentifier
         }
 
         // Function to get the virtual drive from a given path
-        static string ChangeToClonedPathFromVirtual(string path)
+        static string ChangeToClonedPathFromVirtual(string path, string parentFilePath = "")
         {
-            path = path.Replace("$(ClonedRepo)", "");
+
+            if (path.Contains("$(ClonedRepo)"))
+            {
+                path = path.Replace("$(ClonedRepo)", "g:\\");
+                if (path.Contains(".."))
+                {
+                    string resolvedPath = Path.Combine(Path.GetDirectoryName(parentFilePath), path);
+                    if (Directory.Exists(resolvedPath))
+                    {
+                        path = Path.GetFullPath(resolvedPath);
+                    }
+                }
+                if (path.Contains("root\\"))
+                    return path;
+            }
+
             if (path.StartsWith("g:", StringComparison.OrdinalIgnoreCase))
                 return path;
 
-            path = path.ToLower();
+            //path = path.Replace("$(ClonedRepo)", "").ToLower();
+
             int colonIndex = path.IndexOf(":");
             //int lastBackslashIndex = path.LastIndexOf('\\');
             if (colonIndex >= 0)

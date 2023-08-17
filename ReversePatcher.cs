@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using System.Xml;
 using static System.Windows.Forms.LinkLabel;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using System.Runtime.InteropServices;
 
 namespace DepIdentifier
 {
@@ -73,12 +74,19 @@ namespace DepIdentifier
         private static string m_selectedFilterPath = string.Empty;
 
         private static List<string> m_filesForWhichDependenciesNeedToBeIdentified = new List<string>();
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool AllocConsole();
 
         public ReversePatcher()
         {
             InitializeComponent();
+            AllocConsole();
+            Console.WriteLine("Testing console logging");
             CacheAllRootFiles();
             LoadFilters();
+            
+
 
             Cursor = Cursors.WaitCursor;
             //_ = DepIdentifierUtils.ComputeDependenciesForAllFilesAsync(m_FiltersList, m_XMLSDirectoryPath);
