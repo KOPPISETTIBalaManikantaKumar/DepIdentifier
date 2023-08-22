@@ -1,17 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 using System.Xml;
-using System.IO;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
-using System.Windows.Forms;
-using System.Collections;
-using System.Security.Cryptography;
 
 namespace DepIdentifier
 {
@@ -20,16 +11,16 @@ namespace DepIdentifier
         #region required memberVaraibles
         public static List<string> patcherDataLines = new List<string>();
         public static string m_PatcherFilePath = @"g:\xroot\bldtools\s3dpatcher.pat";
-        public static string m_AllS3DDirectoriesFilePath = @"g:\xroot\bldtools\depidentifier\resources\";
-        public static string m_FiltersXMLPath = @"g:\xroot\bldtools\depidentifier\resources\filtersdata.xml";
-        public static string m_FilesListXMLPath = @"g:\xroot\bldtools\depidentifier\resources\filesList.xml";
+        public static string m_AllS3DDirectoriesFilePath = ReversePatcher.resourcePath;
+        public static string m_FiltersXMLPath = ReversePatcher.resourcePath + "\\filtersdata.xml";
+        public static string m_FilesListXMLPath = ReversePatcher.resourcePath + "\\filesList.xml";
         public static List<string> m_CachedFiltersData = new List<string>();
 
         public static List<string> Commonfiles = new List<string> { "oaidl.idl", "ocidl.idl", "atlbase.h", "atlcom.h", "statreg.h", "wtypes.idl", "comdef.h", "math.h", "initguid.h", "objbase.h", "share.h" };
         #endregion
-        const string m_XMLPath = "D:\\temp\\ProjectFilesInfo.xml";
+        //const string m_XMLPath = "D:\\temp\\ProjectFilesInfo.xml";
         //private const string m_logFilePath = "D:\\temp\\ProjectFilesData.txt";
-        private static string m_XMLSDirectoryPath = @"D:\Tools\DepIdentifier\resource\";
+        //private static string m_XMLSDirectoryPath = @"D:\Tools\DepIdentifier\resource\";
 
         //private static string m_ResXMLPath = @"D:\Tools\DepIdentifier\resource\Res.xml";
         //private static string m_FiltersXMLPath = @"D:\Tools\DepIdentifier\resource\FilesList.xml";
@@ -1919,7 +1910,7 @@ namespace DepIdentifier
             {
                 if (xmlDirectoryPath == "")
                 {
-                    xmlDirectoryPath = m_XMLSDirectoryPath;
+                    xmlDirectoryPath = ReversePatcher.resourcePath;
                 }
 
                 DepIdentifierUtils.WriteTextInLog("Folder: " + folder);

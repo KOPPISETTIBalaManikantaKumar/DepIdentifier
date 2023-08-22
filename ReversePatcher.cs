@@ -6,13 +6,17 @@ using static System.Windows.Forms.LinkLabel;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace DepIdentifier
 {
     public partial class ReversePatcher : Form
     {
+        private static string assemblyLocation = Assembly.GetExecutingAssembly().Location;
+        public static string resourcePath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(assemblyLocation), "..\\..\\..\\resources"));
+
         public static string m_logFilePath = Path.GetTempPath() + $"DependencyDataLog_{DateTime.Now:yyyyMMddHHmmss}.txt";
-        private const string resourcePath = "G:\\xroot\\Bldtools\\DepIdentifier\\resources\\";
+        //public const string resourcePath = "G:\\xroot\\Bldtools\\DepIdentifier\\resources\\";
         private List<string> m_RootFilesList = new List<string>{resourcePath + "AllFilesInS3Dkroot.txt",
             resourcePath + "AllFilesInS3Dmroot.txt",
             resourcePath + "AllFilesInS3Drroot.txt",
@@ -21,7 +25,7 @@ namespace DepIdentifier
             resourcePath + "AllFilesInS3Dxroot.txt",
             resourcePath + "AllFilesInS3Dyroot.txt" };
 
-        private List<string> m_ExtensionsList = new List<string> { ".rc", ".cpp", ".vcxproj", "vbproj", ".props", ".csproj", ".vbp", ".wixproj", ".wxs", ".lst", ".h" };
+        private List<string> m_ExtensionsList = new List<string> { ".idl", ".rc", ".cpp", ".vcxproj", "vbproj", ".props", ".csproj", ".vbp", ".wixproj", ".wxs", ".lst", ".h" };
         private bool isShowIDLChecked;
         private bool isShowDotHChecked;
         private bool isShowAllChecked;
@@ -99,22 +103,22 @@ namespace DepIdentifier
         {
             try
             {
-                if (File.Exists(resourcePath + "AllFilesInS3Dkroot.txt"))
-                    cachedKrootFiles = File.ReadAllLines(resourcePath + "AllFilesInS3Dkroot.txt").ToList();
-                if (File.Exists(resourcePath + "AllFilesInS3Dmroot.txt"))
-                    cachedMrootFiles = File.ReadAllLines(resourcePath + "AllFilesInS3Dmroot.txt").ToList();
-                if (File.Exists(resourcePath + "AllFilesInS3Drroot.txt"))
-                    cachedRrootFiles = File.ReadAllLines(resourcePath + "AllFilesInS3Drroot.txt").ToList();
-                if (File.Exists(resourcePath + "AllFilesInS3Dsroot.txt"))
-                    cachedSrootFiles = File.ReadAllLines(resourcePath + "AllFilesInS3Dsroot.txt").ToList();
-                if (File.Exists(resourcePath + "AllFilesInS3Dtroot.txt"))
-                    cachedTrootFiles = File.ReadAllLines(resourcePath + "AllFilesInS3Dtroot.txt").ToList();
-                if (File.Exists(resourcePath + "AllFilesInS3Dxroot.txt"))
-                    cachedXrootFiles = File.ReadAllLines(resourcePath + "AllFilesInS3Dxroot.txt").ToList();
-                if (File.Exists(resourcePath + "AllFilesInS3Dyroot.txt"))
-                    cachedYrootFiles = File.ReadAllLines(resourcePath + "AllFilesInS3Dyroot.txt").ToList();
-                if (File.Exists(resourcePath + "AllFilesInS3Dlroot.txt"))
-                    cachedLrootFiles = File.ReadAllLines(resourcePath + "AllFilesInS3Dlroot.txt").ToList();
+                if (File.Exists(resourcePath + "\\AllFilesInS3Dkroot.txt"))
+                    cachedKrootFiles = File.ReadAllLines(resourcePath + "\\AllFilesInS3Dkroot.txt").ToList();
+                if (File.Exists(resourcePath + "\\AllFilesInS3Dmroot.txt"))
+                    cachedMrootFiles = File.ReadAllLines(resourcePath + "\\AllFilesInS3Dmroot.txt").ToList();
+                if (File.Exists(resourcePath + "\\AllFilesInS3Drroot.txt"))
+                    cachedRrootFiles = File.ReadAllLines(resourcePath + "\\AllFilesInS3Drroot.txt").ToList();
+                if (File.Exists(resourcePath + "\\AllFilesInS3Dsroot.txt"))
+                    cachedSrootFiles = File.ReadAllLines(resourcePath + "\\AllFilesInS3Dsroot.txt").ToList();
+                if (File.Exists(resourcePath + "\\AllFilesInS3Dtroot.txt"))
+                    cachedTrootFiles = File.ReadAllLines(resourcePath + "\\AllFilesInS3Dtroot.txt").ToList();
+                if (File.Exists(resourcePath + "\\AllFilesInS3Dxroot.txt"))
+                    cachedXrootFiles = File.ReadAllLines(resourcePath + "\\AllFilesInS3Dxroot.txt").ToList();
+                if (File.Exists(resourcePath + "\\AllFilesInS3Dyroot.txt"))
+                    cachedYrootFiles = File.ReadAllLines(resourcePath + "\\AllFilesInS3Dyroot.txt").ToList();
+                if (File.Exists(resourcePath + "\\AllFilesInS3Dlroot.txt"))
+                    cachedLrootFiles = File.ReadAllLines(resourcePath + "\\AllFilesInS3Dlroot.txt").ToList();
             }
             catch
             {
@@ -342,16 +346,19 @@ namespace DepIdentifier
             }
 
             bool anyCheckBoxChecked = IsAnyCheckBoxChecked(ProjectsTreeView.Nodes);
-            if (anyCheckBoxChecked)
-            {
-                GetDependenciesBtn.Enabled = true;
-                List<string> currentSelectedFilePaths = new List<string>();
-                GetCheckedFilePaths(ProjectsTreeView.Nodes, currentSelectedFilePaths);
-                SelectedFilesListBox.Items.Clear();
-                currentSelectedFilePaths.Sort();
-                SelectedFilesListBox.Items.AddRange(currentSelectedFilePaths.ToArray());
-            }
-            else { GetDependenciesBtn.Enabled = false; }
+
+            SelectedFilesListBox.Items.Clear();
+            GetDependenciesBtn.Enabled = false;
+            //if (anyCheckBoxChecked)
+            //{
+            //    GetDependenciesBtn.Enabled = true;
+            //    List<string> currentSelectedFilePaths = new List<string>();
+            //    GetCheckedFilePaths(ProjectsTreeView.Nodes, currentSelectedFilePaths);
+            //    SelectedFilesListBox.Items.Clear();
+            //    currentSelectedFilePaths.Sort();
+            //    SelectedFilesListBox.Items.AddRange(currentSelectedFilePaths.ToArray());
+            //}
+            //else { GetDependenciesBtn.Enabled = false; }
         }
 
         private bool IsAnyCheckBoxChecked(TreeNodeCollection nodes)
@@ -434,12 +441,21 @@ namespace DepIdentifier
             XmlDocument xmlDocument = new XmlDocument();
             xmlDocument.Load(DepIdentifierUtils.m_FilesListXMLPath);
 
+            ProgressBar.Minimum = 0;
+            ProgressBar.Maximum = m_filesForWhichDependenciesNeedToBeIdentified.Count;
+
+            int count = 0;
+            ProgressBar.Visible = true;
             foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
             {
+                count++;
+                if(count != 1)
+                    ProgressBar.Increment(1);
                 //Skip the other files for which we donot identify dependencies
                 if (!IsFileExtensionAllowed(file, m_ExtensionsList))
                 {
-                    m_DependencyDictionary.Add(file, new List<string> { "No Dependencies" });
+                    if (!m_DependencyDictionary.ContainsKey(file))
+                        m_DependencyDictionary.Add(file, new List<string> { "No Dependencies" });
                     continue;
                 }
 
@@ -461,7 +477,10 @@ namespace DepIdentifier
                     string[] splittedStrings = dependentList.Split(new[] { ";" }, StringSplitOptions.None);
                     dependenicesOfCurrentFile.AddRange(splittedStrings);
                 }
-                if (m_DependencyDictionary.ContainsKey(file)) continue;
+                if (m_DependencyDictionary.ContainsKey(file))
+                {
+                    continue;
+                }
                 else
                 {
                     m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
@@ -473,13 +492,16 @@ namespace DepIdentifier
 
             foreach (var kvp in m_DependencyDictionary)
             {
-                TreeNode fileNode = new TreeNode(kvp.Key);
-                foreach (string dependency in kvp.Value)
+                if (!string.IsNullOrEmpty(kvp.Key))
                 {
-                    if(!dependency.Contains("No Dependencies"))
-                        fileNode.Nodes.Add(dependency);
+                    TreeNode fileNode = new TreeNode(kvp.Key);
+                    foreach (string dependency in kvp.Value)
+                    {
+                        if ((!string.IsNullOrEmpty(dependency) && string.Compare(dependency, "No Dependencies", StringComparison.OrdinalIgnoreCase) != 0))
+                            fileNode.Nodes.Add(dependency);
+                    }
+                    DependenciesTree.Nodes.Add(fileNode);
                 }
-                DependenciesTree.Nodes.Add(fileNode);
             }
 
             foreach (var keys in m_DependencyDictionary.Keys)
@@ -503,6 +525,7 @@ namespace DepIdentifier
 
             CopyList.Enabled = true;
             CopyList.Visible = true;
+            ProgressBar.Visible = false;
         }
 
         private void GetFileDependenciesRecursively(List<string> m_filesForWhichDependenciesNeedToBeIdentified, XmlDocument xmlDocument = null)
@@ -837,6 +860,24 @@ namespace DepIdentifier
                 MessageBox.Show("Exception occurred while generating pre requisite files: " + ex.Message);
             }
             Cursor.Current = Cursors.Default;
+        }
+
+        private void SelectedFilesBtn_Click(object sender, EventArgs e)
+        {
+            bool anyCheckBoxChecked = IsAnyCheckBoxChecked(ProjectsTreeView.Nodes);
+
+            if (anyCheckBoxChecked)
+            {
+                List<string> currentSelectedFilePaths = new List<string>();
+                GetCheckedFilePaths(ProjectsTreeView.Nodes, currentSelectedFilePaths);
+                SelectedFilesListBox.Items.Clear();
+                currentSelectedFilePaths.Sort();
+                SelectedFilesListBox.Items.AddRange(currentSelectedFilePaths.ToArray());
+                GetDependenciesBtn.Enabled = true;
+            }
+            else
+                GetDependenciesBtn.Enabled = false;
+
         }
     }
 }

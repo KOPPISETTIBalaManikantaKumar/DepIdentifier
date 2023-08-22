@@ -59,6 +59,8 @@ namespace DepIdentifier
             SelectedFilesLabel = new Label();
             DependenciesLabel = new Label();
             DependenciesTree = new TreeView();
+            SelectedFilesBtn = new Button();
+            ProgressBar = new ProgressBar();
             menuStrip1.SuspendLayout();
             SuspendLayout();
             // 
@@ -120,9 +122,9 @@ namespace DepIdentifier
             // GetDependenciesBtn
             // 
             GetDependenciesBtn.Enabled = false;
-            GetDependenciesBtn.Location = new Point(573, 52);
+            GetDependenciesBtn.Location = new Point(883, 51);
             GetDependenciesBtn.Name = "GetDependenciesBtn";
-            GetDependenciesBtn.Size = new Size(125, 23);
+            GetDependenciesBtn.Size = new Size(125, 27);
             GetDependenciesBtn.TabIndex = 6;
             GetDependenciesBtn.Text = "Get Dependencies";
             GetDependenciesBtn.UseVisualStyleBackColor = true;
@@ -131,7 +133,7 @@ namespace DepIdentifier
             // CopyList
             // 
             CopyList.Enabled = false;
-            CopyList.Location = new Point(929, 50);
+            CopyList.Location = new Point(1164, 50);
             CopyList.Name = "CopyList";
             CopyList.Size = new Size(121, 27);
             CopyList.TabIndex = 8;
@@ -212,11 +214,30 @@ namespace DepIdentifier
             DependenciesTree.Size = new Size(778, 446);
             DependenciesTree.TabIndex = 16;
             // 
+            // SelectedFilesBtn
+            // 
+            SelectedFilesBtn.Location = new Point(572, 50);
+            SelectedFilesBtn.Name = "SelectedFilesBtn";
+            SelectedFilesBtn.Size = new Size(140, 27);
+            SelectedFilesBtn.TabIndex = 17;
+            SelectedFilesBtn.Text = "Show Selected Files";
+            SelectedFilesBtn.UseVisualStyleBackColor = true;
+            SelectedFilesBtn.Click += SelectedFilesBtn_Click;
+            // 
+            // ProgressBar
+            // 
+            ProgressBar.Location = new Point(32, 824);
+            ProgressBar.Name = "ProgressBar";
+            ProgressBar.Size = new Size(1287, 23);
+            ProgressBar.TabIndex = 18;
+            // 
             // ReversePatcher
             // 
             AutoScaleMode = AutoScaleMode.None;
             AutoScroll = true;
-            ClientSize = new Size(1380, 810);
+            ClientSize = new Size(1380, 859);
+            Controls.Add(ProgressBar);
+            Controls.Add(SelectedFilesBtn);
             Controls.Add(DependenciesTree);
             Controls.Add(DependenciesLabel);
             Controls.Add(SelectedFilesLabel);
@@ -325,5 +346,7 @@ namespace DepIdentifier
         private Label SelectedFilesLabel;
         private Label DependenciesLabel;
         private TreeView DependenciesTree;
+        private Button SelectedFilesBtn;
+        private ProgressBar ProgressBar;
     }
 }
