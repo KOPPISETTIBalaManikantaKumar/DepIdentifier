@@ -54,6 +54,11 @@ namespace DepIdentifier
             ProjectsTreeView = new TreeView();
             SelectedFilesListBox = new ListBox();
             Recompute = new CheckBox();
+            FilesList = new Label();
+            DependencyListLabel = new Label();
+            SelectedFilesLabel = new Label();
+            DependenciesLabel = new Label();
+            DependenciesTree = new TreeView();
             menuStrip1.SuspendLayout();
             SuspendLayout();
             // 
@@ -63,7 +68,7 @@ namespace DepIdentifier
             menuStrip1.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, toolsToolStripMenuItem, helpToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
-            menuStrip1.Size = new Size(1098, 24);
+            menuStrip1.Size = new Size(1380, 24);
             menuStrip1.TabIndex = 0;
             menuStrip1.Text = "menuStrip1";
             // 
@@ -106,10 +111,10 @@ namespace DepIdentifier
             // 
             DependenciesList.FormattingEnabled = true;
             DependenciesList.ItemHeight = 15;
-            DependenciesList.Location = new Point(573, 328);
+            DependenciesList.Location = new Point(12, 464);
             DependenciesList.Name = "DependenciesList";
             DependenciesList.SelectionMode = SelectionMode.MultiExtended;
-            DependenciesList.Size = new Size(513, 409);
+            DependenciesList.Size = new Size(528, 334);
             DependenciesList.TabIndex = 4;
             // 
             // GetDependenciesBtn
@@ -140,7 +145,7 @@ namespace DepIdentifier
             ProjectsTreeView.CheckBoxes = true;
             ProjectsTreeView.Location = new Point(12, 69);
             ProjectsTreeView.Name = "ProjectsTreeView";
-            ProjectsTreeView.Size = new Size(528, 668);
+            ProjectsTreeView.Size = new Size(528, 361);
             ProjectsTreeView.TabIndex = 9;
             ProjectsTreeView.AfterCheck += ProjectsTreeView_AfterCheck;
             // 
@@ -148,9 +153,9 @@ namespace DepIdentifier
             // 
             SelectedFilesListBox.FormattingEnabled = true;
             SelectedFilesListBox.ItemHeight = 15;
-            SelectedFilesListBox.Location = new Point(573, 104);
+            SelectedFilesListBox.Location = new Point(572, 110);
             SelectedFilesListBox.Name = "SelectedFilesListBox";
-            SelectedFilesListBox.Size = new Size(513, 214);
+            SelectedFilesListBox.Size = new Size(778, 214);
             SelectedFilesListBox.TabIndex = 10;
             // 
             // Recompute
@@ -163,11 +168,60 @@ namespace DepIdentifier
             Recompute.Text = "Re-compute Dependencies";
             Recompute.UseVisualStyleBackColor = true;
             // 
+            // FilesList
+            // 
+            FilesList.AutoSize = true;
+            FilesList.Location = new Point(11, 51);
+            FilesList.Name = "FilesList";
+            FilesList.Size = new Size(184, 15);
+            FilesList.TabIndex = 12;
+            FilesList.Tag = "";
+            FilesList.Text = "Select the files from the below list";
+            // 
+            // DependencyListLabel
+            // 
+            DependencyListLabel.AutoSize = true;
+            DependencyListLabel.Location = new Point(11, 440);
+            DependencyListLabel.Name = "DependencyListLabel";
+            DependencyListLabel.Size = new Size(149, 15);
+            DependencyListLabel.TabIndex = 13;
+            DependencyListLabel.Text = "Complete Dependency List";
+            // 
+            // SelectedFilesLabel
+            // 
+            SelectedFilesLabel.AutoSize = true;
+            SelectedFilesLabel.Location = new Point(572, 92);
+            SelectedFilesLabel.Name = "SelectedFilesLabel";
+            SelectedFilesLabel.Size = new Size(77, 15);
+            SelectedFilesLabel.TabIndex = 14;
+            SelectedFilesLabel.Text = "Selected Files";
+            // 
+            // DependenciesLabel
+            // 
+            DependenciesLabel.AutoSize = true;
+            DependenciesLabel.Location = new Point(572, 330);
+            DependenciesLabel.Name = "DependenciesLabel";
+            DependenciesLabel.Size = new Size(105, 15);
+            DependenciesLabel.TabIndex = 15;
+            DependenciesLabel.Text = "Dependencies Tree";
+            // 
+            // DependenciesTree
+            // 
+            DependenciesTree.Location = new Point(572, 352);
+            DependenciesTree.Name = "DependenciesTree";
+            DependenciesTree.Size = new Size(778, 446);
+            DependenciesTree.TabIndex = 16;
+            // 
             // ReversePatcher
             // 
             AutoScaleMode = AutoScaleMode.None;
             AutoScroll = true;
-            ClientSize = new Size(1098, 810);
+            ClientSize = new Size(1380, 810);
+            Controls.Add(DependenciesTree);
+            Controls.Add(DependenciesLabel);
+            Controls.Add(SelectedFilesLabel);
+            Controls.Add(DependencyListLabel);
+            Controls.Add(FilesList);
             Controls.Add(Recompute);
             Controls.Add(SelectedFilesListBox);
             Controls.Add(ProjectsTreeView);
@@ -266,5 +320,10 @@ namespace DepIdentifier
         private ListBox SelectedFilesListBox;
         private ToolStripMenuItem generatePrerequisiteFilesToolStripMenuItem;
         private CheckBox Recompute;
+        private Label FilesList;
+        private Label DependencyListLabel;
+        private Label SelectedFilesLabel;
+        private Label DependenciesLabel;
+        private TreeView DependenciesTree;
     }
 }

@@ -15,7 +15,7 @@ using System.Security.Cryptography;
 
 namespace DepIdentifier
 {
-    internal static class DepIdentifierUtils
+    public static class DepIdentifierUtils
     {
         #region required memberVaraibles
         public static List<string> patcherDataLines = new List<string>();
@@ -28,8 +28,9 @@ namespace DepIdentifier
         public static List<string> Commonfiles = new List<string> { "oaidl.idl", "ocidl.idl", "atlbase.h", "atlcom.h", "statreg.h", "wtypes.idl", "comdef.h", "math.h", "initguid.h", "objbase.h", "share.h" };
         #endregion
         const string m_XMLPath = "D:\\temp\\ProjectFilesInfo.xml";
-        private const string m_logFilePath = "D:\\temp\\ProjectFilesData.txt";
+        //private const string m_logFilePath = "D:\\temp\\ProjectFilesData.txt";
         private static string m_XMLSDirectoryPath = @"D:\Tools\DepIdentifier\resource\";
+
         //private static string m_ResXMLPath = @"D:\Tools\DepIdentifier\resource\Res.xml";
         //private static string m_FiltersXMLPath = @"D:\Tools\DepIdentifier\resource\FilesList.xml";
         private static string m_ClonedRepo = Utilities.GetClonedRepo();
@@ -48,6 +49,30 @@ namespace DepIdentifier
             ".h",
             ".idl"
         };
+
+        public static void WriteTextInLog(string textData)
+        {
+            try
+            {
+                using (StreamWriter writer = new StreamWriter(ReversePatcher.m_logFilePath, true))
+                {
+                    writer.WriteLine(textData);
+                }
+            }
+            catch { }
+        }
+
+        public static void WriteTextInLog(List<string> textData)
+        {
+            try
+            {
+                using (StreamWriter writer = new StreamWriter(ReversePatcher.m_logFilePath, true))
+                {
+                    writer.WriteLine(string.Join(Environment.NewLine, textData));
+                }
+            }
+            catch { }
+        }
 
 
         private static Dictionary<string, List<string>> fileContents = new Dictionary<string, List<string>>();
@@ -114,7 +139,7 @@ namespace DepIdentifier
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error updating XML: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("Error updating XML: " + ex.Message);
             }
         }
 
@@ -176,11 +201,11 @@ namespace DepIdentifier
                     }
                 }
 
-                Console.WriteLine("XML file created successfully.");
+                DepIdentifierUtils.WriteTextInLog("XML file created successfully.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error writing XML file: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("Error writing XML file: " + ex.Message);
             }
             finally
             {
@@ -221,29 +246,11 @@ namespace DepIdentifier
         //    }
         //    catch (Exception ex)
         //    {
-        //        Console.WriteLine("Error updating XML: " + ex.Message);
+        //        DepIdentifierUtils.WriteTextInLog("Error updating XML: " + ex.Message);
         //    }
         //}
 
-        private static bool FindVBPDependencies(string filePath, string filterPath)
-        {
-            return true;
-        }
-
-        private static bool FindVcxprojDependencies(string filePath, string filterPath)
-        {
-            return true;
-        }
-
-        private static bool FindCppDependencies(string filePath, string filterPath)
-        {
-            return true;
-        }
-
-        private static bool FindDotHDependencies(string filePath, string filterPath)
-        {
-            return true;
-        }
+        
 
         private static async void FindIDLDependenciesAsync(string filePath, string filterPath)
         {
@@ -304,7 +311,7 @@ namespace DepIdentifier
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error updating attribute in XML: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("Error updating attribute in XML: " + ex.Message);
             }
             finally
             {
@@ -395,7 +402,7 @@ namespace DepIdentifier
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error occurred: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("Error occurred: " + ex.Message);
             }
 
             return dependentFiles;
@@ -552,7 +559,7 @@ namespace DepIdentifier
                     additionalIncludeDirs = additionalIncludeDirs + FindAdditionalIncludeDirectorisInAPropFile(propFileDependency, folder, filtersXMLPath);
                 }
                 //props file
-                
+
 
 
                 additionalIncludeDirs = additionalIncludeDirs + AdditionalIncludeDirectoriesOfVCXproj(filePath);
@@ -648,7 +655,7 @@ namespace DepIdentifier
                             }
                             else
                             {
-                                Console.WriteLine($"Unable to resolve path for {resolvedPath}");
+                                DepIdentifierUtils.WriteTextInLog($"Unable to resolve path for {resolvedPath}");
                             }
                         }
                         else if (!componentPath.StartsWith("..") && componentPath.Contains("\\")) //Like M:\Equipment\Middle\Include\Constants.bas or
@@ -700,6 +707,51 @@ namespace DepIdentifier
             }
             return dependenciesList;
         }
+        public static List<string> ExtractAllDependenciesOfCSProj(string csprojFilePath)
+        {
+            List<string> dependencies = new List<string>();
+
+            try
+            {
+                string projectDirectory = Path.GetDirectoryName(csprojFilePath);
+
+                // Extract dependencies from the .csproj file
+                dependencies.AddRange(ExtractDependenciesFromCsprojFile(csprojFilePath));
+
+                // Add all files from the project directory
+                string[] allFiles = Directory.GetFiles(projectDirectory, "*.*", SearchOption.AllDirectories);
+                dependencies.AddRange(allFiles);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error extracting dependencies: {ex.Message}");
+            }
+
+            return dependencies;
+        }
+
+        public static List<string> ExtractDependenciesFromCsprojFile(string csprojFilePath)
+        {
+            List<string> dependencies = new List<string>();
+
+            try
+            {
+                XDocument csprojDocument = XDocument.Load(csprojFilePath);
+
+                var allDependencyItems = csprojDocument.Descendants()
+                    .Where(e => e.Name.LocalName == "Compile" || e.Name.LocalName == "Content" || e.Name.LocalName == "None")
+                    .Select(e => e.Attribute("Include")?.Value)
+                    .Where(include => !string.IsNullOrEmpty(include));
+
+                dependencies.AddRange(allDependencyItems);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error extracting dependencies from {csprojFilePath}: {ex.Message}");
+            }
+
+            return dependencies;
+        }
 
         private static List<string> FindDependenciesInCsprojFiles(string csprojFilePath)
         {
@@ -707,14 +759,14 @@ namespace DepIdentifier
 
             try
             {
-                // Load the .csproj file
-                XDocument doc = XDocument.Load(csprojFilePath);
+                dependencies = ExtractAllDependenciesOfCSProj(csprojFilePath);
+                dependencies = dependencies
+            .Where(dependency =>
+                !dependency.Contains("\\.vs\\") &&
+                !dependency.Contains("\\obj\\") &&
+                !dependency.Contains("\\bin\\"))
+            .ToList();
 
-                dependencies.AddRange(doc.Descendants("Compile").Select(e => e.Attribute("Include").Value));
-
-                dependencies.AddRange(doc.Descendants("Resource").Select(e => e.Attribute("Include").Value));
-
-                dependencies.AddRange(doc.Descendants("None").Select(e => e.Attribute("Include").Value));
             }
             catch (Exception ex)
             {
@@ -746,7 +798,7 @@ namespace DepIdentifier
 
         public static List<string> GetTheFileDependencies(string filePath, string folder, string filtersXMLPath = "")
         {
-            Console.WriteLine("Identifying " + filePath + " Dependencies.");
+            DepIdentifierUtils.WriteTextInLog("Identifying " + filePath + " Dependencies.");
             List<string> dependentFiles = new List<string>();
             try
             {
@@ -775,15 +827,24 @@ namespace DepIdentifier
                 {
                     dependentFiles = FindVBPDependenciesAndAddToXml(filePath, folder, filtersXMLPath);
                 }
-                //else if (filePath.Contains(".csproj"))
-                //{
-                //    dependentFiles = FindCSProjDependenciesAndAddToXml(filePath, folder, filtersXMLPath);
-                //}
-                //else if (filePath.Contains(".rc"))
-                //{
-                //    //dependentFiles = FindRCDependenciesAndAddToXml(filePath, folder, filtersXMLPath);
-                //    dependentFiles = FindCppDependenciesAndAddtoXml(filePath, folder, filtersXMLPath);
+                else if (filePath.Contains(".csproj"))
+                {
+                    dependentFiles = FindCSProjDependenciesAndAddToXml(filePath, folder, filtersXMLPath);
+                }
+                else if (filePath.Contains(".rc"))
+                {
+                    //dependentFiles = FindRCDependenciesAndAddToXml(filePath, folder, filtersXMLPath);
+                    dependentFiles = FindCppDependenciesAndAddtoXml(filePath, folder, filtersXMLPath);
+                }
+                else if (string.Compare(Path.GetExtension(filePath), ".lst", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    dependentFiles = FindLstFileDependenciesAndAddToXml(filePath, folder, filtersXMLPath);
+                }
 
+                else if (string.Compare(Path.GetExtension(filePath), ".wixproj", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    dependentFiles = FindWixProjDependenicesAndAddToXML(filePath, folder, filtersXMLPath);
+                }
                 //else if (filePath.Contains(".props"))
                 //{
                 //    dependentFiles = FindAdditionalIncludeDirectorisInPropFileAndUpdateInXML(filePath, folder, filtersXMLPath);
@@ -799,11 +860,214 @@ namespace DepIdentifier
                     //No dependent files
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Console.WriteLine("Unable to get Dependencies for " + filePath + " with exception " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("Unable to get Dependencies for " + filePath + " with exception " + ex.Message);
             }
             return dependentFiles;
+        }
+
+        private static List<string> FindWixProjDependenicesAndAddToXML(string filePath, string folder, string filtersXMLPath)
+        {
+            List<string> dependencies = new List<string>();
+            try
+            {
+                dependencies = FindWixProjDependenices(filePath, folder, filtersXMLPath);
+
+                if (dependencies != null && dependencies.Count > 0)
+                {
+                    dependencies = ResolveFromLocalDirectoryOrPatcher(filePath, dependencies, fromPatcher: true);
+
+                    UpdateTheXmlAttributeDependenciesPath(filePath, dependencies, folder, filtersXMLPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Failed to FindWixProjDependenicesAndAddToXML with exception: " + ex.Message);
+            }
+            return dependencies;
+        }
+
+        public static List<string> FindWixProjDependenices(string wixprojFilePath, string folder, string filtersXMLPath)
+        {
+            List<string> dependencies = new List<string>();
+
+            try
+            {
+                XDocument wixprojDocument = XDocument.Load(wixprojFilePath);
+
+                List<string> compileItems = wixprojDocument.Descendants()
+                    .Where(e => e.Name.LocalName == "Compile")
+                    .Select(e => e.Attribute("Include")?.Value)
+                    .Where(include => include.EndsWith(".wxs", StringComparison.OrdinalIgnoreCase)).ToList();
+
+                string wixprojFolder = Path.GetDirectoryName(wixprojFilePath);
+
+                dependencies = compileItems.Select(compileItem => ChangeToClonedPathFromVirtual(Path.Combine(wixprojFolder, compileItem))).ToList();
+
+                Dictionary<string, string> variablesDictionary = ExtractVariableDefinitionsFromVixProj(wixprojFilePath);
+                XmlDocument xmlDoc = new XmlDocument();
+                xmlDoc.Load(m_FilesListXMLPath);
+
+                UpdateProjectNameForTheFilesUnderVCXProj(xmlDoc, compileItems, "Project", wixprojFilePath);
+
+                //foreach (string compileItem in compileItems)
+                //{
+                //    string wxsFilePath = Path.Combine(wixprojFolder, compileItem);
+                //    if (File.Exists(wxsFilePath))
+                //    {
+                //        List<string> wixFileDependencies = FindWxsDependencies(wxsFilePath, variablesDictionary);
+
+                //        wixFileDependencies = ResolveFromLocalDirectoryOrPatcher(wxsFilePath, wixFileDependencies, fromPatcher: true);
+
+                //        UpdateTheXmlAttributeDependenciesPath(wxsFilePath, new List<string>(), folder, filtersXMLPath);
+
+                //        //dependencies.AddRange(wixFileDependencies);
+                //    }
+                //    else
+                //    {
+                //        Console.WriteLine($"The {wxsFilePath} path do not exist");
+                //    }
+                //}
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error extracting dependencies: {ex.Message}");
+            }
+
+            return dependencies;
+        }
+        public static Dictionary<string, string> ExtractVariableDefinitionsFromVixProj(string wixprojFilePath)
+        {
+            Dictionary<string, string> variableDefinitions = new Dictionary<string, string>();
+
+            try
+            {
+                XDocument wixprojDocument = XDocument.Load(wixprojFilePath);
+
+                var defineConstantsElement = wixprojDocument.Descendants()
+                    .FirstOrDefault(e => e.Name.LocalName == "DefineConstants");
+
+                if (defineConstantsElement != null)
+                {
+                    string[] constantPairs = defineConstantsElement.Value.Split(';');
+                    foreach (string constantPair in constantPairs)
+                    {
+                        string[] parts = constantPair.Split('=');
+                        if (parts.Length == 2)
+                        {
+                            string variableName = parts[0];
+                            string variableValue = parts[1];
+                            variableDefinitions[variableName] = variableValue;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error extracting variable definitions: {ex.Message}");
+            }
+
+            return variableDefinitions;
+        }
+
+        public static List<string> FindWxsDependencies(string wxsFilePath, Dictionary<string, string> variablesDictionary)
+        {
+            List<string> dependencies = new List<string>();
+
+            try
+            {
+                XmlDocument xmlDoc = new XmlDocument();
+                xmlDoc.Load(wxsFilePath);
+
+                XmlNamespaceManager namespaceManager = new XmlNamespaceManager(xmlDoc.NameTable);
+                namespaceManager.AddNamespace("wix", "http://schemas.microsoft.com/wix/2006/wi");
+
+                XmlNodeList sourceAttributes = xmlDoc.SelectNodes("//wix:File/@Source", namespaceManager);
+                foreach (XmlNode fileNode in sourceAttributes)
+                {
+                    string filePath = fileNode.Value;
+                    if (File.Exists(filePath))
+                        dependencies.Add(filePath);
+                    else
+                        dependencies.Add(ResolveWixFileConstantInPath(filePath, variablesDictionary));
+
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing .wxs file: {ex.Message}");
+            }
+
+            return dependencies;
+        }
+
+        private static string ResolveWixFileConstantInPath(string filePath, Dictionary<string, string> variablesDictionary)
+        {
+            string resolvedPath = filePath;
+            try
+            {
+                if (filePath.Contains("$(var."))
+                {
+                    foreach (var kvp in variablesDictionary)
+                    {
+                        string variablePlaceholder = $"$(var.{kvp.Key})";
+                        resolvedPath = resolvedPath.Replace(variablePlaceholder, kvp.Value);
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine($"ResolveWixFileConstantInPath failed for the {filePath} with excpetion {ex.Message}");
+            }
+            return resolvedPath;
+        }
+
+        public static List<string> GetLstDependencies(string filePath)
+        {
+            List<string> sqlDependencies = new List<string>();
+
+            try
+            {
+                using (StreamReader reader = new StreamReader(filePath))
+                {
+                    string line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        if (!line.StartsWith("#") && line.IndexOf(".sql", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            sqlDependencies.Add(line);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing file: {ex.Message}");
+            }
+
+            return sqlDependencies;
+        }
+
+        private static List<string> FindLstFileDependenciesAndAddToXml(string filePath, string folder, string filtersXMLPath)
+        {
+            List<string> resolvedList = new List<string>();
+            try
+            {
+                List<string> dependencies =  GetLstDependencies(filePath);
+
+                if (dependencies != null && dependencies.Count > 0)
+                {
+                    resolvedList = ResolveFromLocalDirectoryOrPatcher(filePath, dependencies, fromPatcher: true);
+
+                    UpdateTheXmlAttributeDependenciesPath(filePath, resolvedList, folder, filtersXMLPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Failed to FindDotHDependencies with exception: " + ex.Message);
+            }
+            return resolvedList;
         }
 
         private static string FindAdditionalIncludeDirectorisInAPropFile(string filePath, string folder, string filtersXMLPath)
@@ -888,7 +1152,7 @@ namespace DepIdentifier
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error occurred while getting Imported files: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("Error occurred while getting Imported files: " + ex.Message);
             }
             return importedFiles.Distinct().ToList();
         }
@@ -927,7 +1191,7 @@ namespace DepIdentifier
                     if (!String.IsNullOrEmpty(clonedRepoPath))
                         resolvedList.Add(clonedRepoPath);
                     else
-                        Console.WriteLine($"Unable to get cloned repo resolved path for {clonedRepoPath}");
+                        DepIdentifierUtils.WriteTextInLog($"Unable to get cloned repo resolved path for {clonedRepoPath}");
                 }
                 else
                 {
@@ -948,7 +1212,7 @@ namespace DepIdentifier
             {
                 foreach (var unResolvedFilePath in unResolvedList)
                 {
-                    Console.WriteLine($"The {unResolvedFilePath} is not found which is used in the file: {projectFilePath}");
+                    DepIdentifierUtils.WriteTextInLog($"The {unResolvedFilePath} is not found which is used in the file: {projectFilePath}");
                 }
             }
 
@@ -1131,7 +1395,7 @@ namespace DepIdentifier
             {
                 foreach (var unResolvedFilePath in unResolvedList)
                 {
-                    Console.WriteLine($"The {unResolvedFilePath} is not found which is used in the file: {projectFilePath}");
+                    DepIdentifierUtils.WriteTextInLog($"The {unResolvedFilePath} is not found which is used in the file: {projectFilePath}");
                 }
             }
             //ConcurrentBag<string> resolvedListFromPatcher = ResolveFileNamesFromPatcher(filePath, unResolvedList, fromClonedRepo);
@@ -1212,17 +1476,24 @@ namespace DepIdentifier
                         if(matchFound == false)
                         {
                             MessageBox.Show("Issue");
-                            Console.WriteLine("match not found and multiple files are identified as dependencies. ");
-                            foreach(var duplicateDep in unresolvedMultipleFiles)
+                            DepIdentifierUtils.WriteTextInLog("match not found and multiple files are identified as dependencies. ");
+                            if (unresolvedMultipleFiles.Count > 0)
                             {
-                                Console.WriteLine(duplicateDep);
+                                foreach (var duplicateDep in unresolvedMultipleFiles)
+                                {
+                                    DepIdentifierUtils.WriteTextInLog(duplicateDep);
+                                }
+                                allMatchingFiles.AddRange(unresolvedMultipleFiles);
                             }
-                            allMatchingFiles.AddRange(unresolvedMultipleFiles);
+                            else
+                            {
+                                DepIdentifierUtils.WriteTextInLog($"File Not in Patcher: The {searchString} is not found which is used in the file: {projectFilePath}");
+                            }
                         }
                     }
                     else
                     {
-                        Console.WriteLine($"The {searchString} is not found which is used in the file: {projectFilePath}");
+                        DepIdentifierUtils.WriteTextInLog($"Reference Issue: The {searchString} is not found which is used in the file: {projectFilePath}");
                         //The file which is not available is added as a dependecy.
                     }
                 }
@@ -1351,21 +1622,21 @@ namespace DepIdentifier
 
                 if (matchingFiles.Count > 0)
                 {
-                    Console.WriteLine("Multiple files found with the given search string:");
+                    DepIdentifierUtils.WriteTextInLog("Multiple files found with the given search string:");
                     foreach (string file in matchingFiles)
                     {
-                        Console.WriteLine(file);
+                        DepIdentifierUtils.WriteTextInLog(file);
                     }
                     return matchingFiles;
                 }
                 else
                 {
-                    Console.WriteLine($"No matching file found for the given search string ->{searchString}");
+                    DepIdentifierUtils.WriteTextInLog($"No matching file found for the given search string ->{searchString}");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("An error occurred: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("An error occurred: " + ex.Message);
             }
             return new List<string>();
         }
@@ -1472,11 +1743,11 @@ namespace DepIdentifier
             try
             {
                 xmlDoc.Save(filePath);
-                //Console.WriteLine("XML file updated successfully.");
+                //DepIdentifierUtils.WriteTextInLog("XML file updated successfully.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error saving XML: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("Error saving XML: " + ex.Message);
             }
         }
 
@@ -1522,7 +1793,7 @@ namespace DepIdentifier
             catch (Exception ex)
             {
                 MessageBox.Show("Issue1");
-                Console.WriteLine("Error updating attribute in XML: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("Error updating attribute in XML: " + ex.Message);
             }
         }
 
@@ -1554,7 +1825,7 @@ namespace DepIdentifier
         //    }
         //    catch (Exception ex)
         //    {
-        //        Console.WriteLine("Error updating attribute in XML: " + ex.Message);
+        //        DepIdentifierUtils.WriteTextInLog("Error updating attribute in XML: " + ex.Message);
         //    }
         //}
         //Need a way to update the folders data to xml either to get it from .pat file or manually check and update
@@ -1616,7 +1887,7 @@ namespace DepIdentifier
                 GetDependenciesOfFilesList(folder, filesUnderSelectedRoot);
                 stopwatch.Stop();
                 TimeSpan elapsed = stopwatch.Elapsed;
-                Console.WriteLine("Elapsed Time: " + elapsed + "\n");
+                DepIdentifierUtils.WriteTextInLog("Elapsed Time: " + elapsed + "\n");
             }
         }
 
@@ -1651,7 +1922,7 @@ namespace DepIdentifier
                     xmlDirectoryPath = m_XMLSDirectoryPath;
                 }
 
-                Console.WriteLine("Folder: " + folder);
+                DepIdentifierUtils.WriteTextInLog("Folder: " + folder);
                 filesUnderSelectedRoot = FindPatternFilesInDirectory(clonedRepo + folder, "*.*");
 
                 bool ifXMLFileExist = File.Exists(xmlDirectoryPath + @"\FilesList.xml");
@@ -1662,8 +1933,8 @@ namespace DepIdentifier
                 {
                     UpdateXmlWithData(filesUnderSelectedRoot, xmlDirectoryPath + @"\FilesList.xml", folder.Replace("\\", "_"), "FilePath", true);
                 }
-                Console.WriteLine("Identifying the " + folder + " dependencies.");
-                Console.WriteLine("-------------------------------------------------------------");
+                DepIdentifierUtils.WriteTextInLog("Identifying the " + folder + " dependencies.");
+                DepIdentifierUtils.WriteTextInLog("-------------------------------------------------------------");
             }
             catch (Exception ex)
             {
@@ -1702,7 +1973,7 @@ namespace DepIdentifier
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error updating XML: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("Error updating XML: " + ex.Message);
                 throw new Exception("Failed to UpdateXmlWithData with exception: " + ex.Message);
             }
         }
@@ -1755,11 +2026,11 @@ namespace DepIdentifier
         //        // Save the updated XML
         //        xmlDoc.Save(filePath);
 
-        //        Console.WriteLine("XML file updated/created successfully.");
+        //        DepIdentifierUtils.WriteTextInLog("XML file updated/created successfully.");
         //    }
         //    catch (Exception ex)
         //    {
-        //        Console.WriteLine("Error updating/creating XML file: " + ex.Message);
+        //        DepIdentifierUtils.WriteTextInLog("Error updating/creating XML file: " + ex.Message);
         //        throw new Exception("Failed to UpdateListInFilesListXml with exception: " + ex.Message);
         //    }
         //}
@@ -1837,11 +2108,11 @@ namespace DepIdentifier
                 // Save the updated XML
                 xmlDoc.Save(filePath);
 
-                Console.WriteLine("XML file updated/created successfully.");
+                DepIdentifierUtils.WriteTextInLog("XML file updated/created successfully.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error updating/creating XML file: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("Error updating/creating XML file: " + ex.Message);
                 throw new Exception("Failed to UpdateListInFilesListXml with exception: " + ex.Message);
             }
         }
@@ -1883,11 +2154,11 @@ namespace DepIdentifier
                     writer.WriteEndDocument();
                 }
 
-                Console.WriteLine("XML file created successfully.");
+                DepIdentifierUtils.WriteTextInLog("XML file created successfully.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error writing XML file: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("Error writing XML file: " + ex.Message);
                 throw new Exception("Failed to WriteListToXml with exception: " + ex.Message);
             }
         }
@@ -1961,11 +2232,11 @@ namespace DepIdentifier
                     await File.WriteAllTextAsync(virtualDriveFilePath, stringBuilder.ToString());
                 }
 
-                Console.WriteLine("Paths copied to respective files successfully.");
+                DepIdentifierUtils.WriteTextInLog("Paths copied to respective files successfully.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine("An error occurred: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("An error occurred: " + ex.Message);
             }
         }
 

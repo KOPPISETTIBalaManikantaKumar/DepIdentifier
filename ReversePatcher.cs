@@ -5,11 +5,13 @@ using System.Xml;
 using static System.Windows.Forms.LinkLabel;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System.Runtime.InteropServices;
+using System.Collections.Generic;
 
 namespace DepIdentifier
 {
     public partial class ReversePatcher : Form
     {
+        public static string m_logFilePath = Path.GetTempPath() + $"DependencyDataLog_{DateTime.Now:yyyyMMddHHmmss}.txt";
         private const string resourcePath = "G:\\xroot\\Bldtools\\DepIdentifier\\resources\\";
         private List<string> m_RootFilesList = new List<string>{resourcePath + "AllFilesInS3Dkroot.txt",
             resourcePath + "AllFilesInS3Dmroot.txt",
@@ -82,10 +84,10 @@ namespace DepIdentifier
         {
             InitializeComponent();
             AllocConsole();
-            Console.WriteLine("Testing console logging");
+            DepIdentifierUtils.WriteTextInLog("Testing console logging");
             CacheAllRootFiles();
             LoadFilters();
-            
+
 
 
             Cursor = Cursors.WaitCursor;
@@ -118,6 +120,12 @@ namespace DepIdentifier
             {
                 //Might be the files do not exist            
             }
+        }
+
+        public static bool IsFileExtensionAllowed(string filePath, List<string> allowedExtensions)
+        {
+            string fileExtension = System.IO.Path.GetExtension(filePath);
+            return allowedExtensions.Contains(fileExtension, StringComparer.OrdinalIgnoreCase);
         }
 
 
@@ -288,7 +296,7 @@ namespace DepIdentifier
         //            var selectedFilePaths = CollectFilePaths(selectedNode);
         //            foreach (var filePath in selectedFilePaths)
         //            {
-        //                Console.WriteLine(filePath);
+        //                DepIdentifierUtils.WriteTextInLog(filePath);
         //            }
         //        }
         //    }
@@ -334,7 +342,15 @@ namespace DepIdentifier
             }
 
             bool anyCheckBoxChecked = IsAnyCheckBoxChecked(ProjectsTreeView.Nodes);
-            if (anyCheckBoxChecked) { GetDependenciesBtn.Enabled = true; }
+            if (anyCheckBoxChecked)
+            {
+                GetDependenciesBtn.Enabled = true;
+                List<string> currentSelectedFilePaths = new List<string>();
+                GetCheckedFilePaths(ProjectsTreeView.Nodes, currentSelectedFilePaths);
+                SelectedFilesListBox.Items.Clear();
+                currentSelectedFilePaths.Sort();
+                SelectedFilesListBox.Items.AddRange(currentSelectedFilePaths.ToArray());
+            }
             else { GetDependenciesBtn.Enabled = false; }
         }
 
@@ -401,7 +417,7 @@ namespace DepIdentifier
 
         private void GetDependencies_Click(object sender, EventArgs e)
         {
-            SelectedFilesListBox.Items.Clear();
+            DependenciesTree.Nodes.Clear();
             DependenciesList.Items.Clear();
             m_DependencyDictionary = new Dictionary<string, List<string>>();
             m_filesForWhichDependenciesNeedToBeIdentified.Clear();
@@ -410,17 +426,25 @@ namespace DepIdentifier
 
             m_filesForWhichDependenciesNeedToBeIdentified = currentSelectedFilePaths;
 
-            SelectedFilesListBox.Items.AddRange(m_filesForWhichDependenciesNeedToBeIdentified.ToArray());
+            //SelectedFilesListBox.Items.Clear();
+            //SelectedFilesListBox.Items.AddRange(m_filesForWhichDependenciesNeedToBeIdentified.ToArray());
 
-            Console.WriteLine($"Selected files count: {m_filesForWhichDependenciesNeedToBeIdentified.Count}");
+            DepIdentifierUtils.WriteTextInLog($"Selected files count: {m_filesForWhichDependenciesNeedToBeIdentified.Count}");
             int counter = 0;
             XmlDocument xmlDocument = new XmlDocument();
             xmlDocument.Load(DepIdentifierUtils.m_FilesListXMLPath);
 
             foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
             {
+                //Skip the other files for which we donot identify dependencies
+                if (!IsFileExtensionAllowed(file, m_ExtensionsList))
+                {
+                    m_DependencyDictionary.Add(file, new List<string> { "No Dependencies" });
+                    continue;
+                }
+
                 counter++;
-                Console.WriteLine($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count}");
+                DepIdentifierUtils.WriteTextInLog($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count}");
                 List<string> dependenicesOfCurrentFile = new List<string>();
                 Cursor.Current = Cursors.WaitCursor;
                 string dependentList = string.Empty;
@@ -446,6 +470,18 @@ namespace DepIdentifier
             }
 
             List<string> dependencyListToDisplay = new List<string>();
+
+            foreach (var kvp in m_DependencyDictionary)
+            {
+                TreeNode fileNode = new TreeNode(kvp.Key);
+                foreach (string dependency in kvp.Value)
+                {
+                    if(!dependency.Contains("No Dependencies"))
+                        fileNode.Nodes.Add(dependency);
+                }
+                DependenciesTree.Nodes.Add(fileNode);
+            }
+
             foreach (var keys in m_DependencyDictionary.Keys)
             {
                 List<string> dependenciesOfCurrentKey = new List<string>();
@@ -771,7 +807,7 @@ namespace DepIdentifier
         {
             string joinedString = string.Join(Environment.NewLine, DependenciesList.Items.Cast<string>().ToList());
             Clipboard.SetText(joinedString);
-            Console.WriteLine("List of strings copied to clipboard.");
+            DepIdentifierUtils.WriteTextInLog("List of strings copied to clipboard.");
         }
 
         private async void generatePrerequisiteFilesToolStripMenuItem_Click(object sender, EventArgs e)

@@ -50,17 +50,17 @@ namespace DepIdentifier
                     {
                         failedFilePaths.Add($"The filepath for the file '{eachfileNameFromFileNames}' not found. Please review it.");
                         //_logger.Error($"The filepath for the file '{eachfileNameFromFileNames}' not found. Please review it");
-                        //Console.WriteLine($"The filepath for the file '{fileName}' not found. Please review it");
+                        //DepIdentifierUtils.WriteTextInLog($"The filepath for the file '{fileName}' not found. Please review it");
                     }
                 });
 
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error occurred while ResolveFileNamesFromPatcher: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("Error occurred while ResolveFileNamesFromPatcher: " + ex.Message);
             }
 
-            Console.WriteLine(failedFilePaths.Distinct().ToList());
+            DepIdentifierUtils.WriteTextInLog(failedFilePaths.Distinct().ToList());
             return filePaths;
         }
         #endregion
@@ -103,7 +103,7 @@ namespace DepIdentifier
         //    }
         //    catch (Exception ex)
         //    {
-        //        Console.WriteLine("Error occurred while ResolveFileNamesFromPatcher: " + ex.Message);
+        //        DepIdentifierUtils.WriteTextInLog("Error occurred while ResolveFileNamesFromPatcher: " + ex.Message);
         //    }
 
         //    failedFilesList.AddRange(failedFilePaths.Distinct().ToList());
@@ -147,7 +147,7 @@ namespace DepIdentifier
         //    }
         //    catch (Exception ex)
         //    {
-        //        Console.WriteLine("Error occurred while ResolveFileNamesFromPatcher: " + ex.Message);
+        //        DepIdentifierUtils.WriteTextInLog("Error occurred while ResolveFileNamesFromPatcher: " + ex.Message);
         //    }
 
         //    failedFilesList.AddRange(failedFilePaths.Distinct().ToList());
@@ -191,7 +191,7 @@ namespace DepIdentifier
         //    }
         //    catch (Exception ex)
         //    {
-        //        Console.WriteLine("Error occurred while ResolveFileNamesFromPatcher: " + ex.Message);
+        //        DepIdentifierUtils.WriteTextInLog("Error occurred while ResolveFileNamesFromPatcher: " + ex.Message);
         //    }
 
         //    failedFilesList.AddRange(failedFilePaths.Distinct().ToList());
@@ -236,11 +236,11 @@ namespace DepIdentifier
         //            writer.WriteEndDocument();
         //        }
 
-        //        Console.WriteLine("XML file created successfully.");
+        //        DepIdentifierUtils.WriteTextInLog("XML file created successfully.");
         //    }
         //    catch (Exception ex)
         //    {
-        //        Console.WriteLine("Error writing XML file: " + ex.Message);
+        //        DepIdentifierUtils.WriteTextInLog("Error writing XML file: " + ex.Message);
         //    }
         //}
 
@@ -270,7 +270,7 @@ namespace DepIdentifier
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error occurred while extracting additional directories: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("Error occurred while extracting additional directories: " + ex.Message);
             }
 
             return additionalDirectories.Distinct().ToList();
@@ -311,7 +311,7 @@ namespace DepIdentifier
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error occurred while extracting ItemGroups: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("Error occurred while extracting ItemGroups: " + ex.Message);
             }
 
             return includedFiles.Distinct().ToList();
@@ -356,7 +356,7 @@ namespace DepIdentifier
             }
             catch(Exception ex)
             {
-                Console.WriteLine("Error occurred while getting Imported files: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("Error occurred while getting Imported files: " + ex.Message);
             }
             return importedFiles.Distinct().ToList();
         }
@@ -426,7 +426,7 @@ namespace DepIdentifier
         //    }
         //    catch (Exception ex)
         //    {
-        //        Console.WriteLine("Error updating attribute in XML: " + ex.Message);
+        //        DepIdentifierUtils.WriteTextInLog("Error updating attribute in XML: " + ex.Message);
         //    }
         //}
 
@@ -447,7 +447,7 @@ namespace DepIdentifier
         //    }
         //    catch (Exception ex)
         //    {
-        //        Console.WriteLine("Error updating attribute in XML: " + ex.Message);
+        //        DepIdentifierUtils.WriteTextInLog("Error updating attribute in XML: " + ex.Message);
         //    }
         //    finally
         //    {
@@ -484,7 +484,7 @@ namespace DepIdentifier
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error appending a new attribute to XML: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("Error appending a new attribute to XML: " + ex.Message);
             }
         }
 
@@ -493,11 +493,11 @@ namespace DepIdentifier
         //    try
         //    {
         //        xmlDoc.Save(filePath);
-        //        Console.WriteLine("XML file updated successfully.");
+        //        DepIdentifierUtils.WriteTextInLog("XML file updated successfully.");
         //    }
         //    catch (Exception ex)
         //    {
-        //        Console.WriteLine("Error saving XML: " + ex.Message);
+        //        DepIdentifierUtils.WriteTextInLog("Error saving XML: " + ex.Message);
         //    }
         //}
 
@@ -507,11 +507,11 @@ namespace DepIdentifier
             {
                 await AsyncFileLock.LockAsync(filePath);
                 xmlDoc.Save(filePath);
-                Console.WriteLine("XML file updated successfully.");
+                DepIdentifierUtils.WriteTextInLog("XML file updated successfully.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error saving XML: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("Error saving XML: " + ex.Message);
             }
             finally
             {
@@ -539,13 +539,13 @@ namespace DepIdentifier
                 }
                 else
                 {
-                    Console.WriteLine("No matching element found.");
+                    DepIdentifierUtils.WriteTextInLog("No matching element found.");
                     return null;
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error extracting name value from XML: " + ex.Message);
+                DepIdentifierUtils.WriteTextInLog("Error extracting name value from XML: " + ex.Message);
                 return null;
             }
         }
@@ -573,7 +573,7 @@ namespace DepIdentifier
         //    }
         //    catch (Exception ex)
         //    {
-        //        Console.WriteLine("Error extracting dependency value from XML: " + ex.Message);
+        //        DepIdentifierUtils.WriteTextInLog("Error extracting dependency value from XML: " + ex.Message);
         //        return null;
         //    }
         //}
