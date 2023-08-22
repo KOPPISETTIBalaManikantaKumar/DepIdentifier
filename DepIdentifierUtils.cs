@@ -793,7 +793,7 @@ namespace DepIdentifier
             List<string> dependentFiles = new List<string>();
             try
             {
-                if (filePath.Contains(".idl"))
+                if (string.Compare(Path.GetExtension(filePath), ".idl", StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     dependentFiles = FindIDLDependenciesAndAddToXml(filePath, folder);
                 }
@@ -802,11 +802,11 @@ namespace DepIdentifier
                     //dependentFiles = FindDotHDependenciesAndAddToXml(filePath, folder, filtersXMLPath);
                     dependentFiles = FindCppDependenciesAndAddtoXml(filePath, folder, filtersXMLPath);
                 }
-                else if (filePath.Contains(".cpp"))
+                else if (string.Compare(Path.GetExtension(filePath), ".cpp", StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     dependentFiles = FindCppDependenciesAndAddtoXml(filePath, folder, filtersXMLPath);
                 }
-                else if (filePath.Contains(".vcxproj") && !(filePath.Contains("409")))
+                else if (string.Compare(Path.GetExtension(filePath), ".vcxproj", StringComparison.OrdinalIgnoreCase) == 0 && !(filePath.Contains("409")))
                 {
                     dependentFiles = FindVcxprojDependenciesAndAddToXml(filePath, folder, filtersXMLPath);
                 }
@@ -814,15 +814,15 @@ namespace DepIdentifier
                 //{
                 //    dependentFiles = new List<string>();
                 //}
-                else if (filePath.Contains(".vbp"))
+                else if (string.Compare(Path.GetExtension(filePath), ".vbp", StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     dependentFiles = FindVBPDependenciesAndAddToXml(filePath, folder, filtersXMLPath);
                 }
-                else if (filePath.Contains(".csproj"))
+                else if (string.Compare(Path.GetExtension(filePath), ".csproj", StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     dependentFiles = FindCSProjDependenciesAndAddToXml(filePath, folder, filtersXMLPath);
                 }
-                else if (filePath.Contains(".rc"))
+                else if (string.Compare(Path.GetExtension(filePath), ".rc", StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     //dependentFiles = FindRCDependenciesAndAddToXml(filePath, folder, filtersXMLPath);
                     dependentFiles = FindCppDependenciesAndAddtoXml(filePath, folder, filtersXMLPath);
