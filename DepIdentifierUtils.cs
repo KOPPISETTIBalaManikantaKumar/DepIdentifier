@@ -715,7 +715,7 @@ namespace DepIdentifier
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error extracting dependencies: {ex.Message}");
+                DepIdentifierUtils.WriteTextInLog($"Error extracting dependencies: {ex.Message}");
             }
 
             return dependencies;
@@ -738,7 +738,7 @@ namespace DepIdentifier
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error extracting dependencies from {csprojFilePath}: {ex.Message}");
+                DepIdentifierUtils.WriteTextInLog($"Error extracting dependencies from {csprojFilePath}: {ex.Message}");
             }
 
             return dependencies;
@@ -917,13 +917,13 @@ namespace DepIdentifier
                 //    }
                 //    else
                 //    {
-                //        Console.WriteLine($"The {wxsFilePath} path do not exist");
+                //        DepIdentifierUtils.WriteTextInLog($"The {wxsFilePath} path do not exist");
                 //    }
                 //}
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error extracting dependencies: {ex.Message}");
+                DepIdentifierUtils.WriteTextInLog($"Error extracting dependencies: {ex.Message}");
             }
 
             return dependencies;
@@ -956,7 +956,7 @@ namespace DepIdentifier
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error extracting variable definitions: {ex.Message}");
+                DepIdentifierUtils.WriteTextInLog($"Error extracting variable definitions: {ex.Message}");
             }
 
             return variableDefinitions;
@@ -987,7 +987,7 @@ namespace DepIdentifier
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error processing .wxs file: {ex.Message}");
+                DepIdentifierUtils.WriteTextInLog($"Error processing .wxs file: {ex.Message}");
             }
 
             return dependencies;
@@ -1009,7 +1009,7 @@ namespace DepIdentifier
             }
             catch(Exception ex)
             {
-                Console.WriteLine($"ResolveWixFileConstantInPath failed for the {filePath} with excpetion {ex.Message}");
+                DepIdentifierUtils.WriteTextInLog($"ResolveWixFileConstantInPath failed for the {filePath} with excpetion {ex.Message}");
             }
             return resolvedPath;
         }
@@ -1034,7 +1034,7 @@ namespace DepIdentifier
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error processing file: {ex.Message}");
+                DepIdentifierUtils.WriteTextInLog($"Error processing file: {ex.Message}");
             }
 
             return sqlDependencies;
