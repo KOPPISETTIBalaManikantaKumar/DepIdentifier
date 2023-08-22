@@ -1466,7 +1466,7 @@ namespace DepIdentifier
                         }
                         if(matchFound == false)
                         {
-                            MessageBox.Show("Issue");
+                            //MessageBox.Show("Issue");
                             DepIdentifierUtils.WriteTextInLog("match not found and multiple files are identified as dependencies. ");
                             if (unresolvedMultipleFiles.Count > 0)
                             {
@@ -1783,7 +1783,7 @@ namespace DepIdentifier
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Issue1");
+                //MessageBox.Show("Issue1");
                 DepIdentifierUtils.WriteTextInLog("Error updating attribute in XML: " + ex.Message);
             }
         }
