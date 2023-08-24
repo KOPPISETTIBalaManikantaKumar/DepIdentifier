@@ -730,7 +730,6 @@
 //        //        DepIdentifierUtils.WriteTextInLog("Error saving XML: " + ex.Message);
 //        //    }
 //        //}
-        
 
 //        //public static string GetNameAttributeValue(XmlDocument xmlDoc, string elementName, string attributeNameToSearch, string attributeValueToSearch)
 //        //{
