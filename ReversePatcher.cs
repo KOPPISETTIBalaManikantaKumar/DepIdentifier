@@ -12,11 +12,11 @@ namespace DepIdentifier
 {
     public partial class ReversePatcher : Form
     {
+        
         private static string assemblyLocation = Assembly.GetExecutingAssembly().Location;
         public static string resourcePath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(assemblyLocation), "..\\..\\..\\resources"));
 
         public static string m_logFilePath = Path.GetTempPath() + $"DependencyDataLog_{DateTime.Now:yyyyMMddHHmmss}.txt";
-        //public const string resourcePath = "G:\\xroot\\Bldtools\\DepIdentifier\\resources\\";
         private List<string> m_RootFilesList = new List<string>{resourcePath + "AllFilesInS3Dkroot.txt",
             resourcePath + "AllFilesInS3Dmroot.txt",
             resourcePath + "AllFilesInS3Drroot.txt",
@@ -25,10 +25,7 @@ namespace DepIdentifier
             resourcePath + "AllFilesInS3Dxroot.txt",
             resourcePath + "AllFilesInS3Dyroot.txt" };
 
-        private List<string> m_ExtensionsList = new List<string> { ".idl", ".rc", ".cpp", ".vcxproj", "vbproj", ".props", ".csproj", ".vbp", ".wixproj", ".wxs", ".lst", ".h" };
-        private bool isShowIDLChecked;
-        private bool isShowDotHChecked;
-        private bool isShowAllChecked;
+        public static List<string> m_AllowedExtensions = new List<string> { ".idl", ".rc", ".cpp", ".vcxproj", "vbproj", ".props", ".csproj", ".vbp", ".wixproj", ".wxs", ".lst", ".h" };
 
         //CacheAllRootFiles
         public static List<string> cachedKrootFiles = new List<string>();
@@ -41,7 +38,7 @@ namespace DepIdentifier
         public static List<string> cachedYrootFiles = new List<string>();
 
 
-        public Dictionary<string, List<string>> m_DependencyDictionary = new Dictionary<string, List<string>>();
+        public static Dictionary<string, List<string>> m_DependencyDictionary = new Dictionary<string, List<string>>();
 
         public static List<string> GetCachedKrootFiles()
         {
@@ -77,26 +74,19 @@ namespace DepIdentifier
         }
 
 
-        private static string m_selectedFilterPath = string.Empty;
+        public static string m_selectedFilterPath = string.Empty;
 
         private static List<string> m_filesForWhichDependenciesNeedToBeIdentified = new List<string>();
-        [DllImport("kernel32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        static extern bool AllocConsole();
+        //[DllImport("kernel32.dll", SetLastError = true)]
+        //[return: MarshalAs(UnmanagedType.Bool)]
+        //static extern bool AllocConsole();
 
         public ReversePatcher()
         {
             InitializeComponent();
-            AllocConsole();
-            DepIdentifierUtils.WriteTextInLog("Testing console logging");
+            //AllocConsole();
             CacheAllRootFiles();
             LoadFilters();
-
-
-
-            Cursor = Cursors.WaitCursor;
-            //_ = DepIdentifierUtils.ComputeDependenciesForAllFilesAsync(m_FiltersList, m_XMLSDirectoryPath);
-            Cursor = Cursors.Default;
         }
 
         public static void CacheAllRootFiles()
@@ -126,99 +116,22 @@ namespace DepIdentifier
             }
         }
 
-        public static bool IsFileExtensionAllowed(string filePath, List<string> allowedExtensions)
+        private void LoadFilters()
         {
-            string fileExtension = System.IO.Path.GetExtension(filePath);
-            return allowedExtensions.Contains(fileExtension, StringComparer.OrdinalIgnoreCase);
-        }
-
-
-        private void ShowDependencies_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            CheckedListBox checkedListBox = sender as CheckedListBox;
-            foreach (var item in checkedListBox.CheckedItems)
+            if (File.Exists(DepIdentifierUtils.m_FiltersXMLPath))
             {
-                string value = item.ToString();
-                if (value == "Show IDL")
-                    isShowIDLChecked = true;
-                if (value == "Show .h")
-                    isShowDotHChecked = true;
-                if (value == "Show all")
-                    isShowIDLChecked = true;
-            }
-        }
-
-        private async void FilterCombo_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            string rootFilesPath = string.Empty;
-            System.Windows.Forms.ComboBox comboBox = sender as System.Windows.Forms.ComboBox;
-
-            if (m_selectedFilterPath != comboBox.SelectedItem.ToString())
-            {
-                m_selectedFilterPath = comboBox.SelectedItem.ToString();
-                //To get the filters file names
-                //foreach(var rootFile in m_RootFilesList)
-                //{
-                //    if(Path.GetFileName(rootFile).Contains(comboBox.SelectedItem.ToString().Split("\\")[0]))
-                //    {
-                //        rootFilesPath = rootFile;
-                //        break;
-                //    }
-                //}
-                List<string> filesList = new List<string>();
-
-                filesList = GetAllFilesFromSelectedRoot(DepIdentifierUtils.GetSpecificCachedRootList(m_selectedFilterPath), m_selectedFilterPath);
-
-
-                //Fill the tree nodes
-                LoadFiles(filesList);
-
-
-                //m_DependencyList.Clear();
-                //DependenciesList.Items.Clear();
-
-
-                //if (m_selectedFilterPath != null)
-                //{
-                //    SelectAll.Visible = true;
-                //    SelectAll.Enabled = true;
-
-                //    List<string> filesUnderSelectedRoot = new List<string>();
-                //    bool ifXMLFileExist = File.Exists(m_XMLSDirectoryPath + @"\FilesList.xml");
-                //    try
-                //    {
-                //        if (ifXMLFileExist)
-                //        {
-                //            filesUnderSelectedRoot = GetXmlData(m_XMLSDirectoryPath + @"\FilesList.xml", "FiltersData/" + m_selectedFilterPath.Replace("\\", "_"), "Name");
-                //        }
-                //    }
-                //    catch (Exception ex)
-                //    {
-                //        //xml might not contain the data
-                //    }
-                //    if (filesUnderSelectedRoot.Count == 0)
-                //    {
-                //        filesUnderSelectedRoot = Utilities.FindPatternFilesInDirectory(Utilities.GetClonedRepo() + m_selectedFilterPath, "*.*");
-                //        filesUnderSelectedRoot.Sort();
-                //        if (!ifXMLFileExist)
-                //            await DepIdentifierUtils.WriteListToXmlAsync(filesUnderSelectedRoot, m_XMLSDirectoryPath + @"\FilesList.xml", m_selectedFilterPath.Replace("\\", "_"), "FilePath", true);
-                //        else
-                //        {
-                //            await DepIdentifierUtils.UpdateXmlWithDataAsync(filesUnderSelectedRoot, m_XMLSDirectoryPath + @"\FilesList.xml", m_selectedFilterPath.Replace("\\", "_"), "FilePath", true);
-                //        }
-                //    }
-
-                //    ProjectsCheckedList.Items.Clear();
-
-                //    foreach (var file in filesUnderSelectedRoot)
-                //        ProjectsCheckedList.Items.Add(file);
+                var list = MainDirectoriesInfo = XMLHelperAPIs.GetXmlData(DepIdentifierUtils.m_FiltersXMLPath, "data/filters", "Name");
+                foreach (var item in list)
+                {
+                    FilterCombo.Items.Add(item);
+                    m_FiltersList.Add(item);
+                }
             }
         }
 
         private void LoadFiles(List<string> lines)
         {
             ProjectsTreeView.Nodes.Clear();
-
 
             foreach (string line in lines)
             {
@@ -260,6 +173,8 @@ namespace DepIdentifier
             //ProjectsTreeView.ExpandAll();
         }
 
+        #region TreeView related APIs
+
         private TreeNode FindNodeByText(TreeNodeCollection nodes, string text)
         {
             foreach (TreeNode node in nodes)
@@ -271,40 +186,6 @@ namespace DepIdentifier
             }
             return null;
         }
-
-
-        public static List<string> GetAllFilesFromSelectedRoot(List<string> textFilesPath, string rootFolder)
-        {
-
-            List<string> filteredFiles = new List<string>();
-
-            rootFolder = Utilities.GetClonedRepo() + rootFolder.Replace("_", "\\");
-            foreach (string filePath in textFilesPath)
-            {
-                if (filePath.StartsWith(rootFolder, StringComparison.OrdinalIgnoreCase))
-                {
-                    filteredFiles.Add(filePath);
-                }
-            }
-
-            return filteredFiles;
-        }
-
-        //private void GetSelectedFilesButton_Click(object sender, EventArgs e)
-        //{
-        //    TreeNode selectedNode = ProjectsTreeView.SelectedNode;
-        //    if (selectedNode != null)
-        //    {
-        //        if (selectedNode.Checked)
-        //        {
-        //            var selectedFilePaths = CollectFilePaths(selectedNode);
-        //            foreach (var filePath in selectedFilePaths)
-        //            {
-        //                DepIdentifierUtils.WriteTextInLog(filePath);
-        //            }
-        //        }
-        //    }
-        //}
 
         // Recursive function to check/uncheck child nodes
         private void CheckChildNodes(TreeNode node, bool isChecked)
@@ -329,36 +210,6 @@ namespace DepIdentifier
             node.Checked = false;
 
             UncheckAncestors(node.Parent);
-        }
-
-        private void ProjectsTreeView_AfterCheck(object sender, TreeViewEventArgs e)
-        {
-
-            if (e.Action != TreeViewAction.Unknown)
-            {
-                // Check/uncheck child nodes based on the parent's state
-                CheckChildNodes(e.Node, e.Node.Checked);
-                // If the parent node is unchecked, uncheck all its ancestors
-                if (!e.Node.Checked)
-                {
-                    UncheckAncestors(e.Node.Parent);
-                }
-            }
-
-            bool anyCheckBoxChecked = IsAnyCheckBoxChecked(ProjectsTreeView.Nodes);
-
-            SelectedFilesListBox.Items.Clear();
-            GetDependenciesBtn.Enabled = false;
-            //if (anyCheckBoxChecked)
-            //{
-            //    GetDependenciesBtn.Enabled = true;
-            //    List<string> currentSelectedFilePaths = new List<string>();
-            //    GetCheckedFilePaths(ProjectsTreeView.Nodes, currentSelectedFilePaths);
-            //    SelectedFilesListBox.Items.Clear();
-            //    currentSelectedFilePaths.Sort();
-            //    SelectedFilesListBox.Items.AddRange(currentSelectedFilePaths.ToArray());
-            //}
-            //else { GetDependenciesBtn.Enabled = false; }
         }
 
         private bool IsAnyCheckBoxChecked(TreeNodeCollection nodes)
@@ -409,423 +260,9 @@ namespace DepIdentifier
             }
         }
 
-        /// <summary>
-        /// As of now not returning anything and the GetTheFileDependencies is writing the data to xml
-        /// </summary>
-        /// <param name="folder"></param>
-        /// <param name="filesUnderSelectedRoot"></param>
-        public static void GetDependenciesOfFilesList(string folder, List<string> filesUnderSelectedRoot)
-        {
-            foreach (var file in filesUnderSelectedRoot)
-            {
-                DepIdentifierUtils.GetTheFileDependencies(file, folder);
-            }
-        }
-
-        private void GetDependencies_Click(object sender, EventArgs e)
-        {
-            DependenciesTree.Nodes.Clear();
-            DependenciesList.Items.Clear();
-            m_DependencyDictionary = new Dictionary<string, List<string>>();
-            m_filesForWhichDependenciesNeedToBeIdentified.Clear();
-            List<string> currentSelectedFilePaths = new List<string>();
-            GetCheckedFilePaths(ProjectsTreeView.Nodes, currentSelectedFilePaths);
-
-            m_filesForWhichDependenciesNeedToBeIdentified = currentSelectedFilePaths;
-
-            //SelectedFilesListBox.Items.Clear();
-            //SelectedFilesListBox.Items.AddRange(m_filesForWhichDependenciesNeedToBeIdentified.ToArray());
-
-            DepIdentifierUtils.WriteTextInLog($"Selected files count: {m_filesForWhichDependenciesNeedToBeIdentified.Count}");
-            int counter = 0;
-            XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.Load(DepIdentifierUtils.m_FilesListXMLPath);
-
-            ProgressBar.Minimum = 0;
-            ProgressBar.Maximum = m_filesForWhichDependenciesNeedToBeIdentified.Count;
-
-            int count = 0;
-            ProgressBar.Visible = true;
-            foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
-            {
-                count++;
-                if(count != 1)
-                    ProgressBar.Increment(1);
-                //Skip the other files for which we donot identify dependencies
-                if (!IsFileExtensionAllowed(file, m_ExtensionsList))
-                {
-                    if (!m_DependencyDictionary.ContainsKey(file))
-                        m_DependencyDictionary.Add(file, new List<string> { "No Dependencies" });
-                    continue;
-                }
-
-                counter++;
-                DepIdentifierUtils.WriteTextInLog($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count}");
-                List<string> dependenicesOfCurrentFile = new List<string>();
-                Cursor.Current = Cursors.WaitCursor;
-                string dependentList = string.Empty;
-
-                dependentList = GetDependencyDataOfFilesFromXML(file, xmlDocument);
-                if (String.IsNullOrEmpty(dependentList) || Recompute.Checked)
-                {
-                    dependenicesOfCurrentFile = DepIdentifierUtils.GetTheFileDependencies(file, m_selectedFilterPath);
-
-                    //Update the xml accordingly
-                }
-                else
-                {
-                    string[] splittedStrings = dependentList.Split(new[] { ";" }, StringSplitOptions.None);
-                    dependenicesOfCurrentFile.AddRange(splittedStrings);
-                }
-                if (m_DependencyDictionary.ContainsKey(file))
-                {
-                    continue;
-                }
-                else
-                {
-                    m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
-                    GetFileDependenciesRecursively(dependenicesOfCurrentFile, xmlDocument);
-                }
-            }
-
-            List<string> dependencyListToDisplay = new List<string>();
-
-            foreach (var kvp in m_DependencyDictionary)
-            {
-                if (!string.IsNullOrEmpty(kvp.Key))
-                {
-                    TreeNode fileNode = new TreeNode(kvp.Key);
-                    foreach (string dependency in kvp.Value)
-                    {
-                        if ((!string.IsNullOrEmpty(dependency) && string.Compare(dependency, "No Dependencies", StringComparison.OrdinalIgnoreCase) != 0))
-                            fileNode.Nodes.Add(dependency);
-                    }
-                    DependenciesTree.Nodes.Add(fileNode);
-                }
-            }
-
-            foreach (var keys in m_DependencyDictionary.Keys)
-            {
-                List<string> dependenciesOfCurrentKey = new List<string>();
-                m_DependencyDictionary.TryGetValue(keys, out dependenciesOfCurrentKey);
-                dependenciesOfCurrentKey.Sort();
-                dependenciesOfCurrentKey.RemoveAll(dep => dep == "No Dependencies" || String.IsNullOrEmpty(dep));
-                dependencyListToDisplay.AddRange(dependenciesOfCurrentKey);
-            }
-            if (dependencyListToDisplay.Count == 0)
-                DependenciesList.Items.Add("No Dependencies");
-            else
-            {
-                dependencyListToDisplay = dependencyListToDisplay.Distinct().ToList();
-                dependencyListToDisplay.Sort();
-                DependenciesList.Items.AddRange(dependencyListToDisplay.ToArray());
-            }
-
-            Cursor.Current = Cursors.Default;
-
-            CopyList.Enabled = true;
-            CopyList.Visible = true;
-            ProgressBar.Visible = false;
-        }
-
-        private void GetFileDependenciesRecursively(List<string> m_filesForWhichDependenciesNeedToBeIdentified, XmlDocument xmlDocument = null)
-        {
-            List<string> currentListOfFilesDependencies = new List<string>();
-            foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
-            {
-                if (m_DependencyDictionary.ContainsKey(file))
-                    continue;
-
-
-                List<string> dependenicesOfCurrentFile = new List<string>();
-                string dependentList = GetDependencyDataOfFilesFromXML(file, xmlDocument);
-                if (String.IsNullOrEmpty(dependentList) || Recompute.Checked)
-                {
-                    string currentFileFilter = GetCurrentFilterFromFilePath(file);
-                    dependenicesOfCurrentFile = DepIdentifierUtils.GetTheFileDependencies(file, currentFileFilter);
-
-                    //Update the xml accordingly
-                }
-                else
-                {
-                    string[] splittedStrings = dependentList.Split(new[] { ";" }, StringSplitOptions.None);
-                    dependenicesOfCurrentFile.AddRange(splittedStrings);
-                    currentListOfFilesDependencies.AddRange(dependenicesOfCurrentFile);
-                }
-                m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
-
-                if (dependenicesOfCurrentFile.Count > 0)
-                    GetFileDependenciesRecursively(dependenicesOfCurrentFile, xmlDocument);
-            }
-        }
-
-        public static string GetCurrentFilterFromFilePath(string file)
-        {
-            try
-            {
-                string[] filter = file.Split("\\");
-                string currentFileFilter = filter[1] + "_" + filter[2];
-                return currentFileFilter;
-            }
-            catch
-            {
-                return string.Empty;
-            }
-        }
-        private static string GetDependencyDataOfFilesFromXML(string file, XmlDocument xmlDoc = null)
-        {
-            string dependentListSemiColonSeperated = string.Empty;
-            try
-            {
-                if (File.Exists(DepIdentifierUtils.m_FilesListXMLPath))
-                {
-                    if (xmlDoc == null)
-                    {
-                        xmlDoc = new XmlDocument();
-                        xmlDoc.Load(DepIdentifierUtils.m_FilesListXMLPath);
-                    }
-                    string elementName = "filepath";
-                    string attributeNameToSearch = "Name";
-                    string attributeValueToSearch = file.ToLower();
-
-                    string currentFileFilter = GetCurrentFilterFromFilePath(file);
-                    //dependentList = Utilities.GetNameAttributeValue(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "Name", file);
-                    dependentListSemiColonSeperated = Utilities.GetDependecyStringFromXML(xmlDoc, currentFileFilter, elementName, attributeNameToSearch, attributeValueToSearch);
-                    //dependentList = Utilities.GetNameAttributeValue(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "Name", file);
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("GetDependencyDataOfFilsFromXML failed with exception " + ex.Message);
-            }
-            return dependentListSemiColonSeperated;
-        }
-
-        //private void IdentifyIDLDependencies(string idlFileName)
-        //{
-        //    if (idlFileName.Contains(".idl"))
-        //    {
-        //        if (idlFileName != null && idlFileName != string.Empty)
-        //        {
-        //            List<string> parsedIdlFilePaths = Utilities.ExtractImportedFilesAndResolvePathsFromFile(idlFileName);
-        //            List<string> updatedParsedIdlFilePaths = new List<string>();
-        //            updatedParsedIdlFilePaths.AddRange(parsedIdlFilePaths);
-        //            m_DependencyList.AddRange(parsedIdlFilePaths);
-        //            UpdateTheXmlAttributeIDLPath(idlFileName, updatedParsedIdlFilePaths);
-        //            foreach (string idlFile in parsedIdlFilePaths)
-        //            {
-        //                List<string> extractedFilePaths = Utilities.ExtractImportedFilesAndResolvePathsFromFile(idlFile);
-        //                extractedFilePaths = extractedFilePaths.Distinct().ToList();
-        //                UpdateTheXmlAttributeIDLPath(idlFile, extractedFilePaths);
-        //                updatedParsedIdlFilePaths.AddRange(extractedFilePaths);
-        //                updatedParsedIdlFilePaths = updatedParsedIdlFilePaths.Distinct().ToList();
-        //            }
-        //            List<string> itemsToAdd = new List<string>();
-
-        //            while (true)
-        //            {
-        //                itemsToAdd.Clear();
-
-        //                foreach (string idlFile in updatedParsedIdlFilePaths)
-        //                {
-        //                    if (!m_DependencyList.Contains(idlFile))
-        //                    {
-        //                        m_DependencyList.Add(idlFile);
-        //                        List<string> extractedFilePaths = Utilities.ExtractImportedFilesAndResolvePathsFromFile(idlFile);
-        //                        extractedFilePaths = extractedFilePaths.Distinct().ToList();
-        //                        UpdateTheXmlAttributeIDLPath(idlFile, extractedFilePaths);
-        //                        itemsToAdd.AddRange(extractedFilePaths);
-        //                    }
-        //                }
-
-        //                if (itemsToAdd.Count == 0)  //If all the dependencies are already found then break here..
-        //                    break;
-        //                else //Else add the dependencies identified in the above level to updated list.
-        //                {
-        //                    updatedParsedIdlFilePaths.AddRange(itemsToAdd);
-        //                    updatedParsedIdlFilePaths = updatedParsedIdlFilePaths.Distinct().ToList();
-        //                }
-        //            }
-
-        //            m_DependencyList.AddRange(updatedParsedIdlFilePaths.ToList());
-        //            m_DependencyList = m_DependencyList.Distinct().ToList();
-        //            m_DependencyList.Sort();
-
-        //            //UpdateTheXmlAttributeIDLPath(idlFileName, updatedParsedIdlFilePaths);
-        //            //GetFullDependentsList
-        //        }
-        //    }
-        //}
-
-        private async Task IdentifyIDLDependencies(string idlFileName)
-        {
-            if (!IsValidIdlFileName(idlFileName))
-            {
-                return;
-            }
-
-            List<string> parsedIdlFilePaths = await DepIdentifierUtils.GetParsedIdlFilePathsAsync(idlFileName, m_selectedFilterPath);
-            List<string> updatedParsedIdlFilePaths = new List<string>(parsedIdlFilePaths);
-            m_DependencyList.AddRange(parsedIdlFilePaths);
-            await DepIdentifierUtils.UpdateTheXmlAttributeIDLPathAsync(idlFileName, updatedParsedIdlFilePaths, m_selectedFilterPath);
-
-            await UpdateDependenciesRecursiveAsync(updatedParsedIdlFilePaths);
-
-            m_DependencyList = m_DependencyList.Distinct().ToList();
-            m_DependencyList.Sort();
-
-            // GetFullDependentsList
-        }
-
-        private async Task UpdateDependenciesRecursiveAsync(List<string> updatedParsedIdlFilePaths)
-        {
-            List<string> itemsToAdd = new List<string>();
-
-            while (true)
-            {
-                itemsToAdd.Clear();
-
-                await Parallel.ForEachAsync(updatedParsedIdlFilePaths, async (idlFile, cancellationToken) =>
-                {
-                    bool addedToDependencyList = false;
-                    lock (m_DependencyList)
-                    {
-                        if (!m_DependencyList.Contains(idlFile))
-                        {
-                            m_DependencyList.Add(idlFile);
-                            addedToDependencyList = true;
-                        }
-                    }
-
-                    if (addedToDependencyList)
-                    {
-                        List<string> extractedFilePaths = await DepIdentifierUtils.GetParsedIdlFilePathsAsync(idlFile, m_selectedFilterPath);
-                        lock (m_DependencyList)
-                        {
-                            itemsToAdd.AddRange(extractedFilePaths);
-                        }
-                    }
-                });
-
-                if (itemsToAdd.Count == 0)
-                {
-                    break;
-                }
-                else
-                {
-                    updatedParsedIdlFilePaths.AddRange(itemsToAdd);
-                    updatedParsedIdlFilePaths = updatedParsedIdlFilePaths.Distinct().ToList();
-                }
-            }
-        }
-
-
-
-
-
-
-        //private List<string> GetParsedIdlFilePaths(string idlFileName)
-        //{
-        //    List<string> parsedIdlFilePaths = Utilities.ExtractImportedFilesAndResolvePathsFromFile(idlFileName);
-        //    parsedIdlFilePaths = parsedIdlFilePaths.Distinct().ToList();
-
-        //    // Update the XML attribute with IDL path information for the current idlFileName
-        //    UpdateTheXmlAttributeIDLPath(idlFileName, parsedIdlFilePaths);
-
-        //    return parsedIdlFilePaths;
-        //}
-
-        //private async Task<List<string>> GetParsedIdlFilePathsAsync(string idlFileName)
-        //{
-        //    List<string> parsedIdlFilePaths = await Task.Run(() => Utilities.ExtractImportedFilesAndResolvePathsFromFile(idlFileName));
-        //    parsedIdlFilePaths = parsedIdlFilePaths.Distinct().ToList();
-
-        //    await UpdateTheXmlAttributeIDLPathAsync(idlFileName, parsedIdlFilePaths);
-
-        //    return parsedIdlFilePaths;
-        //}
-
-        //private async Task UpdateTheXmlAttributeIDLPathAsync(string idlFileName, List<string> updatedParsedIdlFilePaths)
-        //{
-        //    // Update the XML attribute with IDL path information asynchronously
-        //    if (System.IO.File.Exists(m_XMLSFilesListResourceFileDirectoryPath))
-        //    {
-        //        var xmlDoc = new XmlDocument();
-        //        xmlDoc.Load(m_XMLSFilesListResourceFileDirectoryPath);
-
-        //        //Utilities.AppendNewAttribute(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "IDL", string.Join(";", m_DependencyList));
-        //        Utilities.UpdateTheXmlAttribute(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "Name", idlFileName, "IDL", string.Join(";", idlFilePaths));
-        //        Utilities.SaveXmlToFile(xmlDoc, m_XMLSFilesListResourceFileDirectoryPath);
-        //    }
-        //}
-
-        private bool IsValidIdlFileName(string fileName)
-        {
-            return !string.IsNullOrEmpty(fileName) && fileName.Contains(".idl");
-        }
-
-
-        //private void UpdateDependenciesRecursive(List<string> updatedParsedIdlFilePaths)
-        //{
-        //    List<string> itemsToAdd = new List<string>();
-
-        //    while (true)
-        //    {
-        //        itemsToAdd.Clear();
-
-        //        foreach (string idlFile in updatedParsedIdlFilePaths)
-        //        {
-        //            if (!m_DependencyList.Contains(idlFile))
-        //            {
-        //                m_DependencyList.Add(idlFile);
-        //                List<string> extractedFilePaths = GetParsedIdlFilePaths(idlFile);
-        //                itemsToAdd.AddRange(extractedFilePaths);
-        //            }
-        //        }
-
-        //        if (itemsToAdd.Count == 0)
-        //        {
-        //            break;
-        //        }
-        //        else
-        //        {
-        //            updatedParsedIdlFilePaths.AddRange(itemsToAdd);
-        //            updatedParsedIdlFilePaths = updatedParsedIdlFilePaths.Distinct().ToList();
-        //        }
-        //    }
-        //}
-
-        private async Task UpdateTheXmlAttributeIDLPathAsync(string idlFileName, List<string> idlFilePaths)
-        {
-            if (System.IO.File.Exists(DepIdentifierUtils.m_FilesListXMLPath))
-            {
-                var xmlDoc = new XmlDocument();
-                xmlDoc.Load(DepIdentifierUtils.m_FilesListXMLPath);
-
-                //Utilities.AppendNewAttribute(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "IDL", string.Join(";", m_DependencyList));
-                await DepIdentifierUtils.UpdateTheXmlAttributeAsync(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "Name", idlFileName, "IDL", string.Join(";", idlFilePaths));
-                await Utilities.SaveXmlToFile(xmlDoc, DepIdentifierUtils.m_FilesListXMLPath);
-            }
-        }
-
-        //private void SelectAll_CheckedChanged(object sender, EventArgs e)
-        //{
-        //    CheckBox selectAllCheckBox = sender as CheckBox;
-        //    if (selectAllCheckBox.Checked)
-        //    {
-        //        for (int i = 0; i < ProjectsCheckedList.Items.Count; i++)
-        //        {
-        //            m_SelectedFiles.Add(ProjectsCheckedList.Items[i].ToString());
-        //            ProjectsCheckedList.SetItemChecked(i, true);
-        //        }
-        //        GetDependenciesBtn.Enabled = true;
-        //    }
-        //    else
-        //    {DependenciesList
-        //        GetDependenciesBtn.Enabled = false;
-        //    }
-        //}
-
+        #endregion        
+        
+        #region event Handlers
         private void CopyList_Click(object sender, EventArgs e)
         {
             string joinedString = string.Join(Environment.NewLine, DependenciesList.Items.Cast<string>().ToList());
@@ -847,8 +284,8 @@ namespace DepIdentifier
                 }
                 if (result == DialogResult.Yes)
                 {
-                    await DepIdentifierUtils.GenerateAllS3DFilesListAndFiltersListFromPatFile();
-                    DepIdentifierUtils.CreateFilesListTemplateXML();
+                    await PreRequisiteGenerator.GenerateAllS3DFilesListAndFiltersListFromPatFile();
+                    PreRequisiteGenerator.CreateFilesListTemplateXML();
                 }
                 stopWatch.Stop();
                 TimeSpan elapsed = stopWatch.Elapsed;
@@ -874,10 +311,155 @@ namespace DepIdentifier
                 currentSelectedFilePaths.Sort();
                 SelectedFilesListBox.Items.AddRange(currentSelectedFilePaths.ToArray());
                 GetDependenciesBtn.Enabled = true;
+                MessageBox.Show($"{currentSelectedFilePaths.Count} files selected.");
             }
             else
                 GetDependenciesBtn.Enabled = false;
 
         }
+
+        private void GetDependencies_Click(object sender, EventArgs e)
+        {
+            Cursor.Current = Cursors.WaitCursor;
+            DepIdentifierUtils.WriteTextInLog($"Time start:{DateTime.Now}");
+            DependenciesTree.Nodes.Clear();
+            DependenciesList.Items.Clear();
+            m_DependencyDictionary = new Dictionary<string, List<string>>();
+            m_filesForWhichDependenciesNeedToBeIdentified.Clear();
+            List<string> currentSelectedFilePaths = new List<string>();
+            GetCheckedFilePaths(ProjectsTreeView.Nodes, currentSelectedFilePaths);
+
+            m_filesForWhichDependenciesNeedToBeIdentified = currentSelectedFilePaths;
+
+            DepIdentifierUtils.WriteTextInLog($"Selected files count: {m_filesForWhichDependenciesNeedToBeIdentified.Count}");
+            int counter = 0;
+            XmlDocument xmlDocument = new XmlDocument();
+            xmlDocument.Load(DepIdentifierUtils.m_FilesListXMLPath);
+
+            ProgressBar.Minimum = 0;
+            ProgressBar.Maximum = m_filesForWhichDependenciesNeedToBeIdentified.Count;
+
+            ProgressBar.Visible = true;
+            foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
+            {
+                counter++;
+                if (counter != 1)
+                    ProgressBar.Increment(1);
+
+                //Skip the other files for which we donot identify dependencies
+                if (!DepIdentifierUtils.IsFileExtensionAllowed(file))
+                {
+                    if (!m_DependencyDictionary.ContainsKey(file))
+                        m_DependencyDictionary.Add(file, new List<string> { "No Dependencies" });
+                    continue;
+                }
+                
+                DepIdentifierUtils.WriteTextInLog($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count}");
+                List<string> dependenicesOfCurrentFile = new List<string>();
+                
+                                
+                if (m_DependencyDictionary.ContainsKey(file))
+                {
+                    continue;
+                }
+                else
+                {
+                    dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file, xmlDocument, isRecompute: Recompute.Checked);
+                    m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
+                    FileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile, xmlDocument);
+                }
+            }
+
+            //Display in Tree View
+            List<string> dependencyListToDisplay = new List<string>();
+
+            foreach (var kvp in m_DependencyDictionary)
+            {
+                if (!string.IsNullOrEmpty(kvp.Key))
+                {
+                    TreeNode fileNode = new TreeNode(kvp.Key);
+                    foreach (string dependency in kvp.Value)
+                    {
+                        if ((!string.IsNullOrEmpty(dependency) && string.Compare(dependency, "No Dependencies", StringComparison.OrdinalIgnoreCase) != 0))
+                            fileNode.Nodes.Add(dependency);
+                    }
+                    DependenciesTree.Nodes.Add(fileNode);
+                }
+            }
+
+            DepIdentifierUtils.WriteTextInLog($"Time End:{DateTime.Now}");
+
+            //Display in Tree View
+            foreach (var keys in m_DependencyDictionary.Keys)
+            {
+                List<string> dependenciesOfCurrentKey = new List<string>();
+                m_DependencyDictionary.TryGetValue(keys, out dependenciesOfCurrentKey);
+                dependenciesOfCurrentKey.Sort();
+                dependenciesOfCurrentKey.RemoveAll(dep => dep == "No Dependencies" || String.IsNullOrEmpty(dep));
+                dependencyListToDisplay.AddRange(dependenciesOfCurrentKey);
+            }
+            if (dependencyListToDisplay.Count == 0)
+                DependenciesList.Items.Add("No Dependencies");
+            else
+            {
+                dependencyListToDisplay = dependencyListToDisplay.Distinct().ToList();
+                dependencyListToDisplay.Sort();
+                DependenciesList.Items.AddRange(dependencyListToDisplay.ToArray());
+            }
+
+            Cursor.Current = Cursors.Default;
+
+            CopyList.Enabled = true;
+            CopyList.Visible = true;
+            ProgressBar.Visible = false;
+        }
+
+        private async void FilterCombo_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            string rootFilesPath = string.Empty;
+            System.Windows.Forms.ComboBox comboBox = sender as System.Windows.Forms.ComboBox;
+
+            if (m_selectedFilterPath != comboBox.SelectedItem.ToString())
+            {
+                m_selectedFilterPath = comboBox.SelectedItem.ToString();
+                List<string> filesList = new List<string>();
+
+                filesList = DepIdentifierUtils.GetAllFilesFromSelectedRoot(DepIdentifierUtils.GetSpecificCachedRootList(m_selectedFilterPath), m_selectedFilterPath);
+
+                //Fill the tree nodes
+                LoadFiles(filesList);
+            }
+        }
+
+        private void ProjectsTreeView_AfterCheck(object sender, TreeViewEventArgs e)
+        {
+
+            if (e.Action != TreeViewAction.Unknown)
+            {
+                // Check/uncheck child nodes based on the parent's state
+                CheckChildNodes(e.Node, e.Node.Checked);
+                // If the parent node is unchecked, uncheck all its ancestors
+                if (!e.Node.Checked)
+                {
+                    UncheckAncestors(e.Node.Parent);
+                }
+            }
+
+            bool anyCheckBoxChecked = IsAnyCheckBoxChecked(ProjectsTreeView.Nodes);
+
+            SelectedFilesListBox.Items.Clear();
+            GetDependenciesBtn.Enabled = false;
+            //if (anyCheckBoxChecked)
+            //{
+            //    GetDependenciesBtn.Enabled = true;
+            //    List<string> currentSelectedFilePaths = new List<string>();
+            //    GetCheckedFilePaths(ProjectsTreeView.Nodes, currentSelectedFilePaths);
+            //    SelectedFilesListBox.Items.Clear();
+            //    currentSelectedFilePaths.Sort();
+            //    SelectedFilesListBox.Items.AddRange(currentSelectedFilePaths.ToArray());
+            //}
+            //else { GetDependenciesBtn.Enabled = false; }
+        }
+        #endregion
     }
 }

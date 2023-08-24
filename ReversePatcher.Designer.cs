@@ -289,43 +289,9 @@ namespace DepIdentifier
             }
         }
 
-        private void LoadFilters()
-        {
-            if (File.Exists(DepIdentifierUtils.m_FiltersXMLPath))
-            {
-                var list = MainDirectoriesInfo = GetXmlData(DepIdentifierUtils.m_FiltersXMLPath, "data/filters", "Name");
-                foreach (var item in list)
-                {
-                    FilterCombo.Items.Add(item);
-                    m_FiltersList.Add(item);
-                }
-            }
-        }
+        
 
-        private List<string> GetXmlData(string xml, string node, string attribute)
-        {
-            List<string> filters = new List<string>();
-
-            XmlDocument xmlDoc = new XmlDocument();
-            if (File.Exists(xml))
-            {
-                xmlDoc.Load(xml);
-
-                XmlNode xmlNode = xmlDoc.SelectSingleNode(node);
-                XmlNodeList xmlNodeList = xmlNode.ChildNodes;
-
-                foreach (XmlNode filterNode in xmlNodeList)
-                {
-                    string filterName = filterNode.Attributes[attribute].InnerXml;
-                    filters.Add(filterName);
-                }
-            }
-            else
-            {
-                throw new Exception("Xml file not found..!");
-            }
-            return filters;
-        }
+        
 
         #endregion
 
