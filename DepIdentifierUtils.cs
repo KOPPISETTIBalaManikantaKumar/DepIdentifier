@@ -29,7 +29,6 @@ namespace DepIdentifier
         //                                                            "oaidl.h", "Objbase.h", "ocidl.h", "ole2.h"};
         private static Dictionary<string, List<string>> fileContents = new Dictionary<string, List<string>>();
         #endregion
-        private static string m_ClonedRepo = DepIdentifierUtils.GetClonedRepo();
 
         public static List<string> IncludedExtensions = new List<string>
         {

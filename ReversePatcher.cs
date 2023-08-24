@@ -7,12 +7,13 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Configuration;
 
 namespace DepIdentifier
 {
     public partial class ReversePatcher : Form
     {
-        
+
         private static string assemblyLocation = Assembly.GetExecutingAssembly().Location;
         public static string resourcePath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(assemblyLocation), "..\\..\\..\\resources"));
 
@@ -25,7 +26,8 @@ namespace DepIdentifier
             resourcePath + "AllFilesInS3Dxroot.txt",
             resourcePath + "AllFilesInS3Dyroot.txt" };
 
-        public static List<string> m_AllowedExtensions = new List<string> { ".idl", ".rc", ".cpp", ".vcxproj", "vbproj", ".props", ".csproj", ".vbp", ".wixproj", ".wxs", ".lst", ".h" };
+        private static string allowedExtensionsString = ConfigurationManager.AppSettings["AllowedExtensions"];
+        public static List<string> m_AllowedExtensions = allowedExtensionsString.Split(new[] { "," }, StringSplitOptions.None).ToList();
 
         //CacheAllRootFiles
         public static List<string> cachedKrootFiles = new List<string>();
