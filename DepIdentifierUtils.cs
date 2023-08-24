@@ -3,6 +3,7 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
+using System.Configuration;
 
 namespace DepIdentifier
 {
@@ -10,19 +11,22 @@ namespace DepIdentifier
     {
         #region required memberVaraibles
         public static List<string> patcherDataLines = new List<string>();
-        public static string m_PatcherFilePath = @"g:\xroot\bldtools\s3dpatcher.pat";
+        public static string m_PatcherFilePath = ConfigurationManager.AppSettings["PatcherFilePath"];
         public static string m_AllS3DDirectoriesFilePath = ReversePatcher.resourcePath;
         public static string m_FiltersXMLPath = ReversePatcher.resourcePath + "\\filtersdata.xml";
         public static string m_FilesListXMLPath = ReversePatcher.resourcePath + "\\filesList.xml";
         public static List<string> m_CachedFiltersData = new List<string>();
 
-        public static List<string> Commonfiles = new List<string> { "oaidl.idl", "ocidl.idl", "atlbase.h", "atlcom.h", "statreg.h", "wtypes.idl", "comdef.h",
-                                                                    "math.h", "initguid.h", "objbase.h", "share.h", "olectl.h", "oledb.h", "OLEDBERR.h",
-                                                                    "activscp.h", "adoint.h", "afxdisp.h", "afxres.h", "afxwin.h", "assert.h", "ATLBASE.h",
-                                                                    "atlcomcli.h", "atlconv.h", "atlctl.h", "atldbcli.h", "atldbsch.h", "atlpath.h", "atlsafe.h",
-                                                                    "atlstr.h", "COMDEF.H", "comip.h", "comsvcs.h", "Comutil.h", "crtdbg.h", "ctype.h", "float.h",
-                                                                    "guiddef.h", "INITGUID.H", "inttypes.h", "limits.h", "locale.h", "malloc.h", "Math.h", "msxml6.h",
-                                                                    "oaidl.h", "Objbase.h", "ocidl.h", "ole2.h"};
+        private static string commonFilesString = ConfigurationManager.AppSettings["Commonfiles"];
+        public static List<string> Commonfiles = commonFilesString.Split(new[] { "," }, StringSplitOptions.None).ToList();
+
+        //new List<string> { "oaidl.idl", "ocidl.idl", "atlbase.h", "atlcom.h", "statreg.h", "wtypes.idl", "comdef.h",
+        //                                                            "math.h", "initguid.h", "objbase.h", "share.h", "olectl.h", "oledb.h", "OLEDBERR.h",
+        //                                                            "activscp.h", "adoint.h", "afxdisp.h", "afxres.h", "afxwin.h", "assert.h", "ATLBASE.h",
+        //                                                            "atlcomcli.h", "atlconv.h", "atlctl.h", "atldbcli.h", "atldbsch.h", "atlpath.h", "atlsafe.h",
+        //                                                            "atlstr.h", "COMDEF.H", "comip.h", "comsvcs.h", "Comutil.h", "crtdbg.h", "ctype.h", "float.h",
+        //                                                            "guiddef.h", "INITGUID.H", "inttypes.h", "limits.h", "locale.h", "malloc.h", "Math.h", "msxml6.h",
+        //                                                            "oaidl.h", "Objbase.h", "ocidl.h", "ole2.h"};
         private static Dictionary<string, List<string>> fileContents = new Dictionary<string, List<string>>();
         #endregion
         private static string m_ClonedRepo = DepIdentifierUtils.GetClonedRepo();
@@ -68,7 +72,9 @@ namespace DepIdentifier
 
         public static string GetClonedRepo()
         {
-            return "g:\\";
+            string clonedRepo = ConfigurationManager.AppSettings["ClonedRepo"];
+
+            return clonedRepo;
             //// Load the .props file and get the value of the variable
             //XDocument propsFile = XDocument.Load(@"X:\Bldtools\PropertySheets\SP3D.Release.Win32.props");
             //XNamespace ns = "http://schemas.microsoft.com/developer/msbuild/2003";
