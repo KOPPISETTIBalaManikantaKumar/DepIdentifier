@@ -169,8 +169,6 @@ namespace DepIdentifier
                     }
                 }
             }
-
-            //ProjectsTreeView.ExpandAll();
         }
 
         #region TreeView related APIs
@@ -449,16 +447,6 @@ namespace DepIdentifier
 
             SelectedFilesListBox.Items.Clear();
             GetDependenciesBtn.Enabled = false;
-            //if (anyCheckBoxChecked)
-            //{
-            //    GetDependenciesBtn.Enabled = true;
-            //    List<string> currentSelectedFilePaths = new List<string>();
-            //    GetCheckedFilePaths(ProjectsTreeView.Nodes, currentSelectedFilePaths);
-            //    SelectedFilesListBox.Items.Clear();
-            //    currentSelectedFilePaths.Sort();
-            //    SelectedFilesListBox.Items.AddRange(currentSelectedFilePaths.ToArray());
-            //}
-            //else { GetDependenciesBtn.Enabled = false; }
         }
         #endregion
     }
