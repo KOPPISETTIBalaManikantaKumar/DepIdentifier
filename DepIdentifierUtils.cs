@@ -30,20 +30,20 @@ namespace DepIdentifier
         private static Dictionary<string, List<string>> fileContents = new Dictionary<string, List<string>>();
         #endregion
 
-        public static List<string> IncludedExtensions = new List<string>
-        {
-            ".rc",
-            ".cpp",
-            ".vcxproj",
-            ".vbproj",
-            ".props",
-            ".vbp",
-            ".wixproj",
-            ".wxs",
-            ".lst",
-            ".h",
-            ".idl"
-        };
+        //public static List<string> IncludedExtensions = new List<string>
+        //{
+        //    ".rc",
+        //    ".cpp",
+        //    ".vcxproj",
+        //    ".vbproj",
+        //    ".props",
+        //    ".vbp",
+        //    ".wixproj",
+        //    ".wxs",
+        //    ".lst",
+        //    ".h",
+        //    ".idl"
+        //};
 
         public static void WriteTextInLog(string textData)
         {
@@ -92,13 +92,15 @@ namespace DepIdentifier
         {
             try
             {
+
                 string[] filter = file.Split("\\");
                 string currentFileFilter = filter[1] + "_" + filter[2];
-                return currentFileFilter;
+                return currentFileFilter.ToLower();
             }
-            catch
+            catch(Exception ex)
             {
-                return string.Empty;
+                DepIdentifierUtils.WriteTextInLog($"Failed to GetCurrentFilterFromFilePath for the file {file} with exception: {ex.Message}");
+                return "";
             }
         }
 
@@ -163,7 +165,10 @@ namespace DepIdentifier
                         continue;
                     }
                     else
+                    {
                         resolvedList.Add(ChangeToClonedPathFromVirtual(dependentFile, projectFilePath));
+                        continue;
+                    }
                 }
                 string combinedPath = Path.Combine(localDirectory, dependentFile.Replace("$(ClonedRepo)", "g:\\"));
                 if (File.Exists(combinedPath))
@@ -338,6 +343,85 @@ namespace DepIdentifier
                 list = list.Distinct().ToList();
                 list.RemoveAll(list => string.IsNullOrEmpty(list));
             }
+            return list;
+        }
+
+        public static List<string> ResolveAdditionalDirectoriesFilePaths(List<string> additionalIncludeDirectories, string projectFilePath)
+        {
+            HashSet<string> uniquePathsSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            List<string> uniquePathsList = new List<string>();
+
+            try
+            {
+
+                foreach (string path in additionalIncludeDirectories)
+                {
+                    string currentPath = path;
+                    if (uniquePathsSet.Add(path)) // Add returns true if the path is unique
+                    {
+                        if (!string.IsNullOrEmpty(path))
+                        {
+
+                            currentPath = currentPath.Replace("$(ClonedRepo)", "g:\\");
+                            currentPath = currentPath.Replace("%(AdditionalIncludeDirectories)%", "", StringComparison.OrdinalIgnoreCase);
+                            if (currentPath.Contains("..") || currentPath.Contains(".\\"))
+                            {
+                                string resolvedPath = Path.Combine(Path.GetDirectoryName(projectFilePath), currentPath);
+                                if (Directory.Exists(resolvedPath))
+                                {
+                                    currentPath = Path.GetFullPath(resolvedPath);
+                                }
+                            }
+                            if (currentPath.Contains("root\\", StringComparison.OrdinalIgnoreCase))
+                            {
+                                uniquePathsList.Add(currentPath);
+                                continue;
+                            }
+
+                            currentPath = DepIdentifierUtils.ChangeToClonedPathFromVirtual(currentPath);
+                        }
+                        if (!string.IsNullOrEmpty(currentPath))
+                            uniquePathsList.Add(currentPath);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                DepIdentifierUtils.WriteTextInLog($" Failed in ResolveAdditionalDirectoriesFilePaths withe exception : {ex.Message}");
+            }
+
+            return uniquePathsList;
+        }
+        public static List<string> ResolveAdditionalDirectoriesInList(List<string> additionalIncludeDirectories, string projectFilePath = "")
+        {
+            List<string> list = additionalIncludeDirectories;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (true == string.IsNullOrEmpty(list[i]))
+                    continue;
+
+
+
+                list[i] = list[i].Replace("$(ClonedRepo)", "g:\\");
+                if (list[i].Contains("..") || list[i].Contains(".\\"))
+                {
+                    string resolvedPath = Path.Combine(Path.GetDirectoryName(projectFilePath), list[i]);
+                    if (Directory.Exists(resolvedPath))
+                    {
+                        list[i] = Path.GetFullPath(resolvedPath);
+                    }
+                }
+                if (list[i].Contains("root\\"))
+                    continue;
+
+                list[i] = ChangeToClonedPathFromVirtual(list[i]);
+            }
+
+            //       .Select(list => list.Replace("$(ClonedRepo)", ""))
+            //       .Select(list => ChangeToClonedPathFromVirtual(list)).ToList();
+            list = list.Distinct().ToList();
+            list.RemoveAll(list => string.IsNullOrEmpty(list));
             return list;
         }
         #endregion

@@ -13,7 +13,7 @@ namespace DepIdentifier
     {
         #region public APIS
 
-        public static List<string> GetTheFileDependencies(string filePath, string folder, string filtersXMLPath = "")
+        public static List<string> GetTheFileDependencies(string filePath, string folder, string filesListXMLPath = "")
         {
             DepIdentifierUtils.WriteTextInLog("Identifying " + filePath + " Dependencies.");
             List<string> dependentFiles = new List<string>();
@@ -25,39 +25,39 @@ namespace DepIdentifier
                 }
                 else if (string.Compare(Path.GetExtension(filePath), ".h", StringComparison.OrdinalIgnoreCase) == 0)
                 {
-                    dependentFiles = XMLHelperAPIs.FindDependenciesInADOtHCppAndRCFileAndAddtoXml(filePath, folder, filtersXMLPath);
+                    dependentFiles = XMLHelperAPIs.FindDependenciesInADOtHCppAndRCFileAndAddtoXml(filePath, folder, filesListXMLPath);
                 }
                 else if (string.Compare(Path.GetExtension(filePath), ".cpp", StringComparison.OrdinalIgnoreCase) == 0)
                 {
-                    dependentFiles = XMLHelperAPIs.FindDependenciesInADOtHCppAndRCFileAndAddtoXml(filePath, folder, filtersXMLPath);
+                    dependentFiles = XMLHelperAPIs.FindDependenciesInADOtHCppAndRCFileAndAddtoXml(filePath, folder, filesListXMLPath);
                 }
                 else if (string.Compare(Path.GetExtension(filePath), ".vcxproj", StringComparison.OrdinalIgnoreCase) == 0 && !(filePath.Contains("409")))
                 {
-                    dependentFiles = XMLHelperAPIs.FindVcxprojDependenciesAndAddToXml(filePath, folder, filtersXMLPath);
+                    dependentFiles = XMLHelperAPIs.FindVcxprojDependenciesAndAddToXml(filePath, folder, filesListXMLPath);
                 }
                 else if (string.Compare(Path.GetExtension(filePath), ".vbp", StringComparison.OrdinalIgnoreCase) == 0 || string.Compare(Path.GetExtension(filePath), ".vbproj", StringComparison.OrdinalIgnoreCase) == 0)
                 {
-                    dependentFiles = XMLHelperAPIs.FindVBPDependenciesAndAddToXml(filePath, folder, filtersXMLPath);
+                    dependentFiles = XMLHelperAPIs.FindVBPDependenciesAndAddToXml(filePath, folder, filesListXMLPath);
                 }
                 else if (string.Compare(Path.GetExtension(filePath), ".csproj", StringComparison.OrdinalIgnoreCase) == 0)
                 {
-                    dependentFiles = XMLHelperAPIs.FindCSProjDependenciesAndAddToXml(filePath, folder, filtersXMLPath);
+                    dependentFiles = XMLHelperAPIs.FindCSProjDependenciesAndAddToXml(filePath, folder, filesListXMLPath);
                 }
                 else if (string.Compare(Path.GetExtension(filePath), ".rc", StringComparison.OrdinalIgnoreCase) == 0)
                 {
-                    dependentFiles = XMLHelperAPIs.FindDependenciesInADOtHCppAndRCFileAndAddtoXml(filePath, folder, filtersXMLPath);
+                    dependentFiles = XMLHelperAPIs.FindDependenciesInADOtHCppAndRCFileAndAddtoXml(filePath, folder, filesListXMLPath);
                 }
                 else if (string.Compare(Path.GetExtension(filePath), ".lst", StringComparison.OrdinalIgnoreCase) == 0)
                 {
-                    dependentFiles = XMLHelperAPIs.FindLstFileDependenciesAndAddToXml(filePath, folder, filtersXMLPath);
+                    dependentFiles = XMLHelperAPIs.FindLstFileDependenciesAndAddToXml(filePath, folder, filesListXMLPath);
                 }
                 else if (string.Compare(Path.GetExtension(filePath), ".wixproj", StringComparison.OrdinalIgnoreCase) == 0)
                 {
-                    dependentFiles = XMLHelperAPIs.FindWixProjDependenicesAndAddToXML(filePath, folder, filtersXMLPath);
+                    dependentFiles = XMLHelperAPIs.FindWixProjDependenicesAndAddToXML(filePath, folder, filesListXMLPath);
                 }
                 else if (string.Compare(Path.GetExtension(filePath), ".vcxproj", StringComparison.OrdinalIgnoreCase) == 0 && filePath.Contains("409"))
                 {
-                    dependentFiles = XMLHelperAPIs.Find409VCXProjDependendenciesAndAddToXML(filePath, folder, filtersXMLPath);
+                    dependentFiles = XMLHelperAPIs.Find409VCXProjDependendenciesAndAddToXML(filePath, folder, filesListXMLPath);
                 }
                 else
                 {
@@ -177,7 +177,6 @@ namespace DepIdentifier
                 {
                     throw new Exception($"Failed to FindDependenciesInVcxprojFiles for the file '{vcxprojFilePath}' with exception: '{ex.Message}'");
                 }
-
             }
             return dependencies;
         }
@@ -290,7 +289,7 @@ namespace DepIdentifier
             return dependencies;
         }
 
-        public static List<string> Find409VCXProjDependendencies(string filePath, string folder, string filtersXMLPath)
+        public static List<string> Find409VCXProjDependendencies(string filePath, string folder, string filesListXMLPath)
         {
             List<string> dependencies = new List<string>();
 
@@ -338,7 +337,7 @@ namespace DepIdentifier
             return sqlDependencies;
         }
 
-        public static List<string> FindWixProjDependenices(string wixprojFilePath, string folder, string filtersXMLPath)
+        public static List<string> FindWixProjDependenices(string wixprojFilePath, string folder, string filesListXMLPath)
         {
             List<string> dependencies = new List<string>();
 
@@ -356,10 +355,9 @@ namespace DepIdentifier
                 dependencies = compileItems.Select(compileItem => DepIdentifierUtils.ChangeToClonedPathFromVirtual(Path.Combine(wixprojFolder, compileItem))).ToList();
 
                 //Dictionary<string, string> variablesDictionary = DepIdentifierUtils.ExtractVariableDefinitionsFromWixProj(wixprojFilePath);
-                XmlDocument xmlDoc = new XmlDocument();
-                xmlDoc.Load(DepIdentifierUtils.m_FilesListXMLPath);
+                
 
-                XMLHelperAPIs.UpdateProjectNameForTheFilesUnderVCXProj(xmlDoc, compileItems, "Project", wixprojFilePath);
+                XMLHelperAPIs.UpdateProjectNameForTheFilesUnderVCXProjAsync(compileItems, "Project", wixprojFilePath);
 
                 //foreach (string compileItem in compileItems)
                 //{
@@ -370,7 +368,7 @@ namespace DepIdentifier
 
                 //        wixFileDependencies = ResolveFromLocalDirectoryOrPatcher(wxsFilePath, wixFileDependencies, fromPatcher: true);
 
-                //        UpdateTheXmlAttributeDependenciesPath(wxsFilePath, new List<string>(), folder, filtersXMLPath);
+                //        UpdateTheXmlAttributeDependenciesPath(wxsFilePath, new List<string>(), folder, filesListXMLPath);
 
                 //        //dependencies.AddRange(wixFileDependencies);
                 //    }
@@ -390,6 +388,11 @@ namespace DepIdentifier
 
         public static List<string> GetDependencyDataOfGivenFile(string file, XmlDocument xmlDoc, bool isRecompute = false, string currentFileFilter = "")
         {
+            if (!DepIdentifierUtils.IsFileExtensionAllowed(file))
+            {
+                return new List<string> { "no dependencies" };
+            }
+
             List<string> dependenicesOfCurrentFile = new List<string>();
             try
             {
@@ -403,12 +406,17 @@ namespace DepIdentifier
                 }
                 else
                 {
-                    string[] splittedStrings = dependentList.Split(new[] { ";" }, StringSplitOptions.None);
-                    dependenicesOfCurrentFile.AddRange(splittedStrings);
+                    if (dependentList.Contains(";"))
+                    {
+                        string[] splittedStrings = dependentList.Split(new[] { ";" }, StringSplitOptions.None);
+                        dependenicesOfCurrentFile.AddRange(splittedStrings);
+                    }
+                    else
+                        dependenicesOfCurrentFile.AddRange(dependenicesOfCurrentFile);
                 }
             }
             catch (Exception ex) { }
-
+            dependenicesOfCurrentFile.RemoveAll(dependenicesOfCurrentFile => string.IsNullOrEmpty(dependenicesOfCurrentFile));
             return dependenicesOfCurrentFile;
                 
         }
@@ -447,6 +455,8 @@ namespace DepIdentifier
             List<string> currentListOfFilesDependencies = new List<string>();
             foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
             {
+                if (string.Compare("No Dependencies", file, StringComparison.OrdinalIgnoreCase) == 0)
+                    continue;
                 if (ReversePatcher.m_DependencyDictionary.ContainsKey(file))
                     continue;
 
@@ -458,7 +468,10 @@ namespace DepIdentifier
                 ReversePatcher.m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
 
                 if (dependenicesOfCurrentFile.Count > 0)
-                    GetFileDependenciesRecursively(dependenicesOfCurrentFile, xmlDocument);
+                {
+                    if (string.Compare("No Dependencies", dependenicesOfCurrentFile[0], StringComparison.OrdinalIgnoreCase) != 0)
+                        GetFileDependenciesRecursively(dependenicesOfCurrentFile, xmlDocument);
+                }
             }
         }
 
@@ -493,28 +506,18 @@ namespace DepIdentifier
                                               .ToList();
 
 
-                    HashSet<string> uniquePathsSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    List<string> uniquePathsList = new List<string>();
-
-                    foreach (string path in paths)
-                    {
-                        if (uniquePathsSet.Add(path)) // Add returns true if the path is unique
-                        {
-                            uniquePathsList.Add(path);
-                        }
-                    }
-
-                    additionalIncludeDirs = uniquePathsList;
+                    additionalIncludeDirs = DepIdentifierUtils.ResolveAdditionalDirectoriesFilePaths(paths, vcxprojFilePath);
                 }
             }
             catch (Exception ex)
             {
                 DepIdentifierUtils.WriteTextInLog($"Error: Faile in AdditionalIncludeDirectoriesOfVCXproj for the file: {vcxprojFilePath} with exception: {ex.Message}");
             }
+            //additionalIncludeDirs.RemoveAll(additionalIncludeDirs => string.IsNullOrEmpty(additionalIncludeDirs));
             return additionalIncludeDirs;
         }
 
-        public static List<string> FindAdditionalIncludeDirectorisInAPropFile(string filePath, string folder, string filtersXMLPath)
+        public static List<string> FindAdditionalIncludeDirectorisInAPropFile(string filePath, string folder, string filesListXMLPath)
         {
             List<string> additionalIncludeDirectories = new List<string>();
             if (File.Exists(filePath))
@@ -543,6 +546,22 @@ namespace DepIdentifier
                                                             .Elements(ns + "AdditionalIncludeDirectories")
                                                             .Select(element => element.Value)
                                                             .FirstOrDefault());
+                List<string> paths = new List<string>();
+                foreach (var includeDirs in additionalIncludeDirectories)
+                {
+                    if (string.IsNullOrEmpty(includeDirs))
+                        continue;
+                    var tempList = new List<string>();
+                    tempList = includeDirs.Split(';')
+                                       .Select(path => path.Trim())  // Remove leading/trailing spaces
+                                       .Select(path => path.Replace("%(AdditionalIncludeDirectories)", ""))
+                                       .ToList();
+                    paths.AddRange(tempList);
+                }
+                paths.RemoveAll(paths => string.Compare("", paths) == 0);
+                additionalIncludeDirectories = DepIdentifierUtils.ResolveAdditionalDirectoriesFilePaths(paths, filePath);
+
+                additionalIncludeDirectories = paths;
 
             }
             return additionalIncludeDirectories;
@@ -566,7 +585,7 @@ namespace DepIdentifier
 
             string projectName = XMLHelperAPIs.GetAttributeOfFilePathFromXML(xmlDocument, "Project", fileName);
             string additionalIncludeDirectories = "";
-            if (projectName != null || projectName != "")
+            if (!string.IsNullOrEmpty(projectName))
                 additionalIncludeDirectories = XMLHelperAPIs.GetAttributeOfFilePathFromXML(xmlDocument, "AdditionalIncludeDirectories", projectName);
 
 

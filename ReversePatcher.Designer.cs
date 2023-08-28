@@ -313,6 +313,6 @@ namespace DepIdentifier
         private Label DependenciesLabel;
         private TreeView DependenciesTree;
         private Button SelectedFilesBtn;
-        private ProgressBar ProgressBar;
+        private static ProgressBar ProgressBar;
     }
 }

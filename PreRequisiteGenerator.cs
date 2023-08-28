@@ -19,6 +19,10 @@ namespace DepIdentifier
             try
             {
                 var virtualDriveFiles = new Dictionary<string, StringBuilder>();
+                if(!File.Exists(DepIdentifierUtils.m_PatcherFilePath))
+                {
+                    MessageBox.Show($"Unabe to find the patcher in the location {DepIdentifierUtils.m_PatcherFilePath}");
+                }
                 List<string> patcherDataLines = File.ReadAllLines(DepIdentifierUtils.m_PatcherFilePath).ToList();
 
                 List<string> filtersDataList = new List<string>();
@@ -95,10 +99,7 @@ namespace DepIdentifier
         //To create FilesList.xml
         public static void CreateFilesListTemplateXML()
         {
-            if (ReversePatcher.cachedKrootFiles.Count < 0)
-            {
-                ReversePatcher.CacheAllRootFiles();
-            }
+            ReversePatcher.CacheAllRootFiles();
             try
             {
                 if (DepIdentifierUtils.m_CachedFiltersData.Count == 0)
@@ -113,25 +114,26 @@ namespace DepIdentifier
                         CreateFiltersInXML();
                     }
 
+                    ReversePatcher.SetProgressBar(0, DepIdentifierUtils.m_CachedFiltersData.Count);
+                    int counter = 0;
                     foreach (var filterPath in DepIdentifierUtils.m_CachedFiltersData)
                     {
-                        if (filterPath == "sroot_civil")
-                        {
-
-                        }
+                        counter++;
+                        ReversePatcher.IncrementProgressBar(counter);
                         //Get Filters Data from the Res file and later use it to add the xmlDirectoryPath
                         List<string> filesToAddInXML = DepIdentifierUtils.GetAllFilesFromSelectedRoot(DepIdentifierUtils.GetSpecificCachedRootList(filterPath), filterPath);
-                        filesToAddInXML = DepIdentifierUtils.FilterFilePathsByExtensions(filesToAddInXML, DepIdentifierUtils.IncludedExtensions);
+                       // filesToAddInXML = DepIdentifierUtils.FilterFilePathsByExtensions(filesToAddInXML, DepIdentifierUtils.IncludedExtensions);
 
                         XMLHelperAPIs.CreateOrUpdateListXml(filesToAddInXML, DepIdentifierUtils.m_FilesListXMLPath, "filtersdata", filterPath.Replace("\\", "_"), "filepath");
-
                     }
                 }
             }
             catch (Exception ex)
             {
-                throw new Exception("Exception occurred while creating files list template xml");
+                throw new Exception($"Error occurred while creating files list template xml with exception: {ex.Message}");
             }
+            ReversePatcher.ProgressBarVisibility(false);
         }
+
     }
 }

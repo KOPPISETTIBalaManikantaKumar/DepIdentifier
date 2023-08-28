@@ -275,6 +275,7 @@ namespace DepIdentifier
             try
             {
                 Cursor.Current = Cursors.WaitCursor;
+                
                 Stopwatch stopWatch = Stopwatch.StartNew();
                 stopWatch.Start();
                 DialogResult result = DialogResult.Yes;
@@ -340,6 +341,32 @@ namespace DepIdentifier
             ProgressBar.Maximum = m_filesForWhichDependenciesNeedToBeIdentified.Count;
 
             ProgressBar.Visible = true;
+
+            //Resolve the vcxproj files first if any.
+            List<string> vcxProjFilesSelected = new List<string>();
+            foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
+            {
+                if (string.Compare(".vcxproj", Path.GetExtension(file), StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    vcxProjFilesSelected.Add(file);
+                    //m_filesForWhichDependenciesNeedToBeIdentified.Remove(file);
+
+                    List<string> dependenicesOfCurrentFile = new List<string>();
+                    if (m_DependencyDictionary.ContainsKey(file))
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file, xmlDocument, isRecompute: Recompute.Checked);
+                        m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
+                        FileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile, xmlDocument);
+                    }
+                }
+            }
+
+            m_filesForWhichDependenciesNeedToBeIdentified.RemoveAll(x => vcxProjFilesSelected.Contains(x) == true);
+
             foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
             {
                 counter++;
@@ -353,11 +380,11 @@ namespace DepIdentifier
                         m_DependencyDictionary.Add(file, new List<string> { "No Dependencies" });
                     continue;
                 }
-                
+
                 DepIdentifierUtils.WriteTextInLog($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count}");
                 List<string> dependenicesOfCurrentFile = new List<string>();
-                
-                                
+
+
                 if (m_DependencyDictionary.ContainsKey(file))
                 {
                     continue;
@@ -449,6 +476,22 @@ namespace DepIdentifier
 
             SelectedFilesListBox.Items.Clear();
             GetDependenciesBtn.Enabled = false;
+        }
+
+        public static void SetProgressBar(int minimum, int maximum) 
+        {
+            ProgressBar.Visible = true;
+            ProgressBar.Minimum = minimum;
+            ProgressBar.Maximum = maximum;
+            ProgressBar.Value = minimum;
+        }
+        public static void IncrementProgressBar(int incrementedValue) 
+        {
+            ProgressBar.Value = incrementedValue;
+        }
+        public static void ProgressBarVisibility(bool visible)
+        {
+            ProgressBar.Visible = visible;
         }
         #endregion
     }
