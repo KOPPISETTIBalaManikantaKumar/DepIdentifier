@@ -3,11 +3,10 @@ using System.Diagnostics;
 using System.Windows.Forms;
 using System.Xml;
 using static System.Windows.Forms.LinkLabel;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-using System.Runtime.InteropServices;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Configuration;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using System;
 
 namespace DepIdentifier
 {
@@ -24,6 +23,7 @@ namespace DepIdentifier
             resourcePath + "AllFilesInS3Dsroot.txt",
             resourcePath + "AllFilesInS3Dtroot.txt",
             resourcePath + "AllFilesInS3Dxroot.txt",
+            resourcePath + "AllFilesInS3Dyroot.txt",
             resourcePath + "AllFilesInS3Dyroot.txt" };
 
         private static string allowedExtensionsString = ConfigurationManager.AppSettings["AllowedExtensions"];
@@ -38,6 +38,7 @@ namespace DepIdentifier
         public static List<string> cachedTrootFiles = new List<string>();
         public static List<string> cachedXrootFiles = new List<string>();
         public static List<string> cachedYrootFiles = new List<string>();
+        public static bool isXMLSaved = false;
 
 
         public static Dictionary<string, List<string>> m_DependencyDictionary = new Dictionary<string, List<string>>();
@@ -260,8 +261,8 @@ namespace DepIdentifier
             }
         }
 
-        #endregion        
-        
+        #endregion
+
         #region event Handlers
         private void CopyList_Click(object sender, EventArgs e)
         {
@@ -275,7 +276,7 @@ namespace DepIdentifier
             try
             {
                 Cursor.Current = Cursors.WaitCursor;
-                
+
                 Stopwatch stopWatch = Stopwatch.StartNew();
                 stopWatch.Start();
                 DialogResult result = DialogResult.Yes;
@@ -334,13 +335,9 @@ namespace DepIdentifier
 
             DepIdentifierUtils.WriteTextInLog($"Selected files count: {m_filesForWhichDependenciesNeedToBeIdentified.Count}");
             int counter = 0;
-            XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.Load(DepIdentifierUtils.m_FilesListXMLPath);
+            XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
 
-            ProgressBar.Minimum = 0;
-            ProgressBar.Maximum = m_filesForWhichDependenciesNeedToBeIdentified.Count;
-
-            ProgressBar.Visible = true;
+            var progressBar = SetProgressBar(0, m_filesForWhichDependenciesNeedToBeIdentified.Count+1);
 
             //Resolve the vcxproj files first if any.
             List<string> vcxProjFilesSelected = new List<string>();
@@ -348,35 +345,44 @@ namespace DepIdentifier
             {
                 if (string.Compare(".vcxproj", Path.GetExtension(file), StringComparison.OrdinalIgnoreCase) == 0)
                 {
+                    DepIdentifierUtils.WriteTextInLog($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count} Idenitying " +
+                        $"{file} dependencies");
+                    counter++;
+                    IncrementProgressBar(progressBar, counter);
                     vcxProjFilesSelected.Add(file);
                     //m_filesForWhichDependenciesNeedToBeIdentified.Remove(file);
 
                     List<string> dependenicesOfCurrentFile = new List<string>();
-                    if (m_DependencyDictionary.ContainsKey(file))
+                    if (m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
                     {
                         continue;
                     }
                     else
                     {
-                        dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file, xmlDocument, isRecompute: Recompute.Checked);
+                        dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file, isRecompute: Recompute.Checked);
+                        dependenicesOfCurrentFile = dependenicesOfCurrentFile.Select(item =>
+                                            item.Contains("..") && Path.IsPathRooted(item) ?
+                                            Path.GetFullPath(item) : item.ToLower())
+                                            .Distinct()
+                                            .ToList();
                         m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
-                        FileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile, xmlDocument);
+                        FileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile);
                     }
                 }
             }
 
             m_filesForWhichDependenciesNeedToBeIdentified.RemoveAll(x => vcxProjFilesSelected.Contains(x) == true);
 
+
             foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
             {
                 counter++;
-                if (counter != 1)
-                    ProgressBar.Increment(1);
-
+                IncrementProgressBar(progressBar, counter);
                 //Skip the other files for which we donot identify dependencies
                 if (!DepIdentifierUtils.IsFileExtensionAllowed(file))
                 {
-                    if (!m_DependencyDictionary.ContainsKey(file))
+                    //if (!m_DependencyDictionary.ContainsKey(file))
+                    if (!m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
                         m_DependencyDictionary.Add(file, new List<string> { "No Dependencies" });
                     continue;
                 }
@@ -385,15 +391,20 @@ namespace DepIdentifier
                 List<string> dependenicesOfCurrentFile = new List<string>();
 
 
-                if (m_DependencyDictionary.ContainsKey(file))
+                if (m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
                 {
                     continue;
                 }
                 else
                 {
-                    dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file, xmlDocument, isRecompute: Recompute.Checked);
+                    dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file, isRecompute: Recompute.Checked);
+                    dependenicesOfCurrentFile = dependenicesOfCurrentFile.Select(item =>
+                                            item.Contains("..") && Path.IsPathRooted(item) ?
+                                            Path.GetFullPath(item) : item.ToLower())
+                                            .Distinct()
+                                            .ToList();
                     m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
-                    FileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile, xmlDocument);
+                    FileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile);
                 }
             }
 
@@ -429,7 +440,9 @@ namespace DepIdentifier
                 DependenciesList.Items.Add("No Dependencies");
             else
             {
-                dependencyListToDisplay = dependencyListToDisplay.Distinct().ToList();
+                dependencyListToDisplay = dependencyListToDisplay.Select(item => item.ToLower())    // Convert strings to lowercase
+                                                                .Distinct()                        // Remove duplicates
+                                                                .ToList();
                 dependencyListToDisplay.Sort();
                 DependenciesList.Items.AddRange(dependencyListToDisplay.ToArray());
             }
@@ -438,23 +451,24 @@ namespace DepIdentifier
 
             CopyList.Enabled = true;
             CopyList.Visible = true;
-            ProgressBar.Visible = false;
         }
 
         private async void FilterCombo_SelectedIndexChanged(object sender, EventArgs e)
         {
             string rootFilesPath = string.Empty;
             System.Windows.Forms.ComboBox comboBox = sender as System.Windows.Forms.ComboBox;
-
-            if (m_selectedFilterPath != comboBox.SelectedItem.ToString())
+            if (comboBox.SelectedIndex >= 0)
             {
-                m_selectedFilterPath = comboBox.SelectedItem.ToString();
-                List<string> filesList = new List<string>();
+                if (m_selectedFilterPath != comboBox.SelectedItem.ToString())
+                {
+                    m_selectedFilterPath = comboBox.SelectedItem.ToString();
+                    List<string> filesList = new List<string>();
 
-                filesList = DepIdentifierUtils.GetAllFilesFromSelectedRoot(DepIdentifierUtils.GetSpecificCachedRootList(m_selectedFilterPath), m_selectedFilterPath);
+                    filesList = DepIdentifierUtils.GetAllFilesFromSelectedRoot(DepIdentifierUtils.GetSpecificCachedRootList(m_selectedFilterPath), m_selectedFilterPath);
 
-                //Fill the tree nodes
-                LoadFiles(filesList);
+                    //Fill the tree nodes
+                    LoadFiles(filesList);
+                }
             }
         }
 
@@ -478,20 +492,39 @@ namespace DepIdentifier
             GetDependenciesBtn.Enabled = false;
         }
 
-        public static void SetProgressBar(int minimum, int maximum) 
+        public static System.Windows.Forms.ProgressBar SetProgressBar(int minimum, int maximum)
         {
-            ProgressBar.Visible = true;
-            ProgressBar.Minimum = minimum;
-            ProgressBar.Maximum = maximum;
-            ProgressBar.Value = minimum;
+            System.Windows.Forms.ProgressBar progressBar = new System.Windows.Forms.ProgressBar();
+                progressBar.Minimum = minimum;
+                progressBar.Maximum = maximum;
+                progressBar.Location = new System.Drawing.Point(20, 50); // Set the location
+                progressBar.Size = new System.Drawing.Size(200, 30); // Set the size
+                //Controls.Add(progressBar);
+            
+
+            //progressBar.Value = progress;
+
+            //System.Windows.Forms.ProgressBar progressBar = new System.Windows.Forms.ProgressBar();
+            //progressBar.Location = new Point(32, 824);
+            //progressBar.Name = "ProgressBar";
+            //progressBar.Size = new Size(1287, 23);
+            //progressBar.TabIndex = 18;
+
+            //progressBar.Visible = true;
+            //progressBar.Minimum = minimum;
+            //progressBar.Maximum = maximum;
+            //progressBar.Value = minimum;
+            //Controls.Add(progressBar);
+            return progressBar;
         }
-        public static void IncrementProgressBar(int incrementedValue) 
+        public static void IncrementProgressBar(System.Windows.Forms.ProgressBar progressBar, int incrementedValue)
         {
-            ProgressBar.Value = incrementedValue;
+            if(incrementedValue >= progressBar.Minimum && incrementedValue <= progressBar.Maximum)
+                progressBar.Value = incrementedValue;
         }
-        public static void ProgressBarVisibility(bool visible)
+        public static void ProgressBarVisibility(System.Windows.Forms.ProgressBar progressBar, bool visible)
         {
-            ProgressBar.Visible = visible;
+            progressBar.Visible = visible;
         }
         #endregion
     }

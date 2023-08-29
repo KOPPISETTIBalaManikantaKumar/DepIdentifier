@@ -249,14 +249,11 @@ namespace DepIdentifier
         {
             List<string> allMatchingFiles = new List<string>();
 
-            XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.Load(m_FilesListXMLPath);
-
             XmlNodeList xmlNodeList;
-
 
             foreach (string searchString in searchStrings)
             {
+                XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
                 xmlNodeList = xmlDocument.SelectNodes("//filepath[@ShortName='" + searchString.ToLower() + "']");
 
                 if(xmlNodeList != null)

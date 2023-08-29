@@ -8,8 +8,43 @@ using System.Xml;
 
 namespace DepIdentifier
 {
-    internal class XMLHelperAPIs
+    internal static class XMLHelperAPIs
     {
+        private static string xmlFilePath;
+        private static XmlDocument cachedXmlDocument;
+        private static DateTime lastModifiedTime;
+
+        static XMLHelperAPIs()
+        {
+            cachedXmlDocument = null;
+            lastModifiedTime = DateTime.MinValue;
+        }
+
+        public static XmlDocument GetFilesListXmlDocument()
+        {
+            try
+            {
+                DateTime currentModifiedTime = File.GetLastWriteTime(DepIdentifierUtils.m_FilesListXMLPath);
+
+                // Check if the XML file has been modified since the last access
+                if (cachedXmlDocument == null || currentModifiedTime > lastModifiedTime || ReversePatcher.isXMLSaved == true)
+                {
+                    // Load the XML document
+                    cachedXmlDocument = new XmlDocument();
+                    cachedXmlDocument.Load(DepIdentifierUtils.m_FilesListXMLPath);
+
+                    // Update the last modified time
+                    lastModifiedTime = currentModifiedTime;
+                }
+                ReversePatcher.isXMLSaved = false;
+            }
+            catch(Exception)
+            {
+                cachedXmlDocument = new XmlDocument();
+                cachedXmlDocument.Load(DepIdentifierUtils.m_FilesListXMLPath);
+            }
+            return cachedXmlDocument;
+        }
 
         #region Identification and Adding to XML
 
@@ -26,7 +61,7 @@ namespace DepIdentifier
             {
                 UpdateTheXmlAttributeDependenciesPathAsync(filePath, new List<string> { "No Dependencies" }, folder);
             }
-            return parsedIdlFilePaths; 
+            return parsedIdlFilePaths;
         }
 
         public static List<string> FindDependenciesInADOtHCppAndRCFileAndAddtoXml(string filePath, string folder, string filesListXMLPath)
@@ -37,8 +72,7 @@ namespace DepIdentifier
                 List<string> dependenciesList = FileDepIdentifier.FindDependenciesInADOtHCppAndRCFile(filePath);
                 if (dependenciesList != null && dependenciesList.Count > 0)
                 {
-                    XmlDocument xmlDocument = new XmlDocument();
-                    xmlDocument.Load(DepIdentifierUtils.m_FilesListXMLPath);
+                    XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
                     string projectName = XMLHelperAPIs.GetAttributeOfFilePathFromXML(xmlDocument, "Project", filePath);
                     string additionalIncludeDirectories = XMLHelperAPIs.GetAttributeOfFilePathFromXML(xmlDocument, "AdditionalIncludeDirectories", projectName);
 
@@ -48,11 +82,11 @@ namespace DepIdentifier
 
                     UpdateTheXmlAttributeReferencesPathAsync(filePath, resolvedList);
 
-                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, resolvedList, folder, filesListXMLPath);
+                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, resolvedList, folder);
                 }
                 else
                 {
-                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, new List<string> { "no dependencies"}, folder, filesListXMLPath);
+                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, new List<string> { "no dependencies"}, folder);
                 }
             }
             catch (Exception ex)
@@ -86,20 +120,19 @@ namespace DepIdentifier
 
                     additionalIncludeDirs = string.Join(";", DepIdentifierUtils.ResolveAdditionalDirectoriesInList(additionalIncludeDirsList, filePath));
 
-                    XmlDocument xmlDoc = new XmlDocument();
-                    xmlDoc.Load(DepIdentifierUtils.m_FilesListXMLPath);
-                    UpdateTheXmlAttribute(xmlDoc, folder.Replace("//", "_") + "/filepath", "Name", filePath, "AdditionalIncludeDirectories", additionalIncludeDirs);
-                    XMLHelperAPIs.SaveXmlToFile(xmlDoc, DepIdentifierUtils.m_FilesListXMLPath);
+                    XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
+                    UpdateTheXmlAttribute(xmlDocument, folder.Replace("//", "_") + "/filepath", "Name", filePath, "AdditionalIncludeDirectories", additionalIncludeDirs);
+                    XMLHelperAPIs.SaveXmlToFile(xmlDocument, DepIdentifierUtils.m_FilesListXMLPath);
 
                     resolvedList = DepIdentifierUtils.ResolveFromLocalDirectoryOrPatcher(filePath, dependenciesList);
 
-                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, resolvedList, folder, filesListXMLPath);
+                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, resolvedList, folder);
                     UpdateProjectNameForTheFilesUnderVCXProjAsync(resolvedList, "Project", filePath);
                     UpdateTheXmlAttributeReferencesPathAsync(filePath, resolvedList);
                 }
                 else
                 {
-                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, new List<string> { "no dependencies" }, folder, filesListXMLPath);
+                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, new List<string> { "no dependencies" }, folder);
                 }
             }
             catch (Exception ex)
@@ -119,12 +152,12 @@ namespace DepIdentifier
                 {
                     //resolvedList = ResolveFromLocalDirectoryOrPatcher(filePath, dependenciesList, fromPatcher: true);
 
-                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, dependenciesList, folder, filesListXMLPath);
+                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, dependenciesList, folder);
                     UpdateTheXmlAttributeReferencesPathAsync(filePath, dependenciesList);
                 }
                 else
                 {
-                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, new List<string> { "no dependencies" }, folder, filesListXMLPath);
+                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, new List<string> { "no dependencies" }, folder);
                 }
             }
             catch (Exception ex)
@@ -145,12 +178,12 @@ namespace DepIdentifier
                 {
                     resolvedList = DepIdentifierUtils.ResolveFromLocalDirectoryOrPatcher(filePath, dependencies, fromPatcher: true);
 
-                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, resolvedList, folder, filesListXMLPath);
+                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, resolvedList, folder);
                     UpdateTheXmlAttributeReferencesPathAsync(filePath, resolvedList);
                 }
                 else
                 {
-                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, new List<string> { "no dependencies" }, folder, filesListXMLPath);
+                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, new List<string> { "no dependencies" }, folder);
                 }
             }
             catch (Exception ex)
@@ -171,12 +204,12 @@ namespace DepIdentifier
                 {
                     dependencies = DepIdentifierUtils.ResolveFromLocalDirectoryOrPatcher(filePath, dependencies, fromPatcher: true);
 
-                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, dependencies, folder, filesListXMLPath);
+                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, dependencies, folder);
                     UpdateTheXmlAttributeReferencesPathAsync(filePath, dependencies);
                 }
                 else
                 {
-                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, new List<string> { "no dependencies" }, folder, filesListXMLPath);
+                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, new List<string> { "no dependencies" }, folder);
                 }
             }
             catch (Exception ex)
@@ -197,12 +230,12 @@ namespace DepIdentifier
                 {
                     dependencies = DepIdentifierUtils.ResolveFromLocalDirectoryOrPatcher(filePath, dependencies, fromPatcher: true);
 
-                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, dependencies, folder, filesListXMLPath);
+                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, dependencies, folder);
                     UpdateTheXmlAttributeReferencesPathAsync(filePath, dependencies);
                 }
                 else
                 {
-                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, new List<string> { "no dependencies" }, folder, filesListXMLPath);
+                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, new List<string> { "no dependencies" }, folder);
                 }
             }
             catch (Exception ex)
@@ -222,12 +255,12 @@ namespace DepIdentifier
                 {
                     resolvedList = DepIdentifierUtils.ResolveFromLocalDirectoryOrPatcher(filePath, dependenciesList, fromPatcher: true);
 
-                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, resolvedList, folder, filesListXMLPath);
+                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, resolvedList, folder);
                     UpdateTheXmlAttributeReferencesPathAsync(filePath, resolvedList);
                 }
                 else
                 {
-                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, new List<string> { "no dependencies" }, folder, filesListXMLPath);
+                    UpdateTheXmlAttributeDependenciesPathAsync(filePath, new List<string> { "no dependencies" }, folder);
                 }
             }
             catch (Exception ex)
@@ -260,57 +293,55 @@ namespace DepIdentifier
             return string.Empty;
         }
 
-        public static void UpdateTheXmlAttributeDependenciesPathAsync(string filePath, List<string> updatedParsedIdlFilePaths, string folder, string filesListXMLPath = "")
+        public static void UpdateTheXmlAttributeDependenciesPathAsync(string filePath, List<string> updatedParsedIdlFilePaths, string folder)
         {
             //Update the XML attribute with IDL path information asynchronously
-            if (filesListXMLPath == "")
-                filesListXMLPath = DepIdentifierUtils.m_FilesListXMLPath;
+            XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
 
-            if (System.IO.File.Exists(filesListXMLPath))
+            string dependencyFiles = string.Empty;
+            if (updatedParsedIdlFilePaths.Count == 0)
             {
-                var xmlDoc = new XmlDocument();
-                xmlDoc.Load(filesListXMLPath);
-
-                string dependencyFiles = string.Empty;
-                if (updatedParsedIdlFilePaths.Count == 0)
-                {
-                    dependencyFiles = "no dependencies";
-                }
-                else
-                {
-                    foreach (var file in updatedParsedIdlFilePaths)
-                    {
-                        dependencyFiles = dependencyFiles + file + ";";
-                    }
-                }
-                //Utilities.AppendNewAttribute(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "IDL", string.Join(";", m_DependencyList));
-                UpdateTheXmlAttribute(xmlDoc, DepIdentifierUtils.GetCurrentFilterFromFilePath(filePath) + "/filepath", "Name", filePath, "Dependency", string.Join(";", dependencyFiles));
-                XMLHelperAPIs.SaveXmlToFile(xmlDoc, DepIdentifierUtils.m_FilesListXMLPath);
+                dependencyFiles = "no dependencies";
             }
+            else
+            {
+                foreach (var file in updatedParsedIdlFilePaths)
+                {
+                    dependencyFiles = dependencyFiles + file + ";";
+                }
+            }
+            //Utilities.AppendNewAttribute(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "IDL", string.Join(";", m_DependencyList));
+            UpdateTheXmlAttribute(xmlDocument, DepIdentifierUtils.GetCurrentFilterFromFilePath(filePath) + "/filepath", "Name", filePath, "Dependency", string.Join(";", dependencyFiles));
+            XMLHelperAPIs.SaveXmlToFile(xmlDocument, DepIdentifierUtils.m_FilesListXMLPath);
+
+        }
+        public static void UpdateTheXmlAttributeDependenciesPathAsync(string filePath, string dependenciesListSemicolonSeperated, string folder)
+        {
+            XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
+
+            if (string.IsNullOrEmpty(dependenciesListSemicolonSeperated))
+            {
+                dependenciesListSemicolonSeperated = "no dependencies";
+            }
+            //Utilities.AppendNewAttribute(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "IDL", string.Join(";", m_DependencyList));
+            UpdateTheXmlAttribute(xmlDocument, DepIdentifierUtils.GetCurrentFilterFromFilePath(filePath) + "/filepath", "Name", filePath, "Dependency", string.Join(";", dependenciesListSemicolonSeperated));
+            XMLHelperAPIs.SaveXmlToFile(xmlDocument, DepIdentifierUtils.m_FilesListXMLPath);
         }
         
-        public static void UpdateTheXmlAttributeReferencesPathAsync(string filePath, List<string> updatedParsedIdlFilePaths, string filesListXMLPath = "")
+        public static void UpdateTheXmlAttributeReferencesPathAsync(string filePath, List<string> updatedParsedIdlFilePaths)
         {
             try
             {
-                //Update the XML attribute with IDL path information asynchronously
-                if (filesListXMLPath == "")
-                    filesListXMLPath = DepIdentifierUtils.m_FilesListXMLPath;
+                XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
 
-                if (System.IO.File.Exists(filesListXMLPath))
+                string dependencyFiles = string.Empty;
+                //for each file Update the filePath as referenced file here..
+                foreach (var file in updatedParsedIdlFilePaths)
                 {
-                    var xmlDoc = new XmlDocument();
-                    xmlDoc.Load(filesListXMLPath);
-
-                    string dependencyFiles = string.Empty;
-                    //for each file Update the filePath as referenced file here..
-                    foreach (var file in updatedParsedIdlFilePaths)
-                    {
-                        string folder = DepIdentifierUtils.GetCurrentFilterFromFilePath(file).ToLower(); ;
-                        UpdateTheXmlAttribute(xmlDoc, folder + "/filepath", "Name", file, "Reference", filePath, true);
-                    }
-                    XMLHelperAPIs.SaveXmlToFile(xmlDoc, DepIdentifierUtils.m_FilesListXMLPath);
+                    string folder = DepIdentifierUtils.GetCurrentFilterFromFilePath(file).ToLower(); ;
+                    UpdateTheXmlAttribute(xmlDocument, folder + "/filepath", "Name", file, "Reference", filePath, true);
                 }
+                XMLHelperAPIs.SaveXmlToFile(xmlDocument, DepIdentifierUtils.m_FilesListXMLPath);
             }
             catch (Exception ex)
             {
@@ -325,6 +356,7 @@ namespace DepIdentifier
                 await AsyncFileLock.LockAsync(filePath);
                 xmlDoc.Save(filePath);
                 DepIdentifierUtils.WriteTextInLog("XML file updated successfully.");
+                ReversePatcher.isXMLSaved = true;
             }
             catch (Exception ex)
             {
@@ -341,11 +373,14 @@ namespace DepIdentifier
             try
             {
                 xmlDoc.Save(filePath);
-                //DepIdentifierUtils.WriteTextInLog("XML file updated successfully.");
+                ReversePatcher.isXMLSaved = true;
+                DepIdentifierUtils.WriteTextInLog("XML file updated successfully.");
             }
             catch (Exception ex)
             {
                 DepIdentifierUtils.WriteTextInLog("Error saving XML: " + ex.Message);
+                Thread.Sleep(1000);
+                SaveXmlToFile(xmlDoc, filePath);
             }
         }
 
@@ -408,21 +443,18 @@ namespace DepIdentifier
         {
             try
             {
-                // Load existing XML document if it exists, otherwise create a new one
                 XmlDocument xmlDoc = new XmlDocument();
+
                 if (File.Exists(filePath))
                 {
                     xmlDoc.Load(filePath);
                 }
                 else
                 {
-                    XmlDeclaration xmlDeclaration = xmlDoc.CreateXmlDeclaration("1.0", "UTF-8", null);
-                    XmlElement root = xmlDoc.CreateElement(parentNode);
-                    xmlDoc.AppendChild(root);
-                    xmlDoc.InsertBefore(xmlDeclaration, root);
+                    xmlDoc.AppendChild(xmlDoc.CreateXmlDeclaration("1.0", "UTF-8", null));
+                    xmlDoc.AppendChild(xmlDoc.CreateElement(parentNode));
                 }
 
-                // Get or create the parent node
                 XmlElement parentNodeElement = xmlDoc.SelectSingleNode($"//{parentNode}") as XmlElement;
                 if (parentNodeElement == null)
                 {
@@ -430,7 +462,6 @@ namespace DepIdentifier
                     xmlDoc.AppendChild(parentNodeElement);
                 }
 
-                // Get the root element
                 XmlElement rootElement = parentNodeElement.SelectSingleNode($"{rootElementName}") as XmlElement;
                 if (rootElement == null)
                 {
@@ -438,16 +469,14 @@ namespace DepIdentifier
                     parentNodeElement.AppendChild(rootElement);
                 }
 
-                if (currentElementName != "")
+                if (!string.IsNullOrEmpty(currentElementName))
                 {
-                    // Process each string
                     foreach (string str in stringsList)
                     {
-                        if(string.Compare("g:\\kroot\\commonroute\\testing\\doc\\new_atp's_testplan.xls", str, StringComparison.OrdinalIgnoreCase) == 0)
+                        if (string.Equals("g:\\kroot\\commonroute\\testing\\doc\\new_atp's_testplan.xls", str, StringComparison.OrdinalIgnoreCase))
                         {
-                            //
+                            // Do something specific for this case, if needed
                         }
-                        // Check if the element already exists
                         XmlElement existingElement = null;
                         try
                         {
@@ -460,39 +489,131 @@ namespace DepIdentifier
                         }
                         if (existingElement == null)
                         {
-                            // Create a new element and add it to the root
                             XmlElement newElement = xmlDoc.CreateElement(currentElementName);
                             newElement.SetAttribute("Name", str);
+
                             if (File.Exists(str))
+                            {
                                 newElement.SetAttribute("ShortName", Path.GetFileName(str));
+                            }
+
                             rootElement.AppendChild(newElement);
                         }
                         else
                         {
                             if (File.Exists(str))
                             {
-                                XmlAttribute xmlNode = existingElement.GetAttributeNode("ShortName");
-                                if (xmlNode == null)
+                                XmlAttribute shortNameAttribute = existingElement.GetAttributeNode("ShortName");
+                                if (shortNameAttribute == null)
                                 {
                                     existingElement.SetAttribute("ShortName", Path.GetFileName(str));
                                 }
                             }
                         }
-                        // If the element exists, you can choose to do something here
                     }
                 }
 
-                // Save the updated XML
                 xmlDoc.Save(filePath);
+                if (filePath == DepIdentifierUtils.m_FilesListXMLPath)
+                    ReversePatcher.isXMLSaved = true;
 
                 DepIdentifierUtils.WriteTextInLog("XML file updated/created successfully.");
             }
             catch (Exception ex)
             {
                 DepIdentifierUtils.WriteTextInLog("Error updating/creating XML file: " + ex.Message);
-                throw new Exception("Failed to UpdateListInFilesListXml with exception: " + ex.Message);
+                // Re-throw the exception to propagate it further if needed
+                //throw;
             }
         }
+
+
+        //public static void CreateOrUpdateListXml(List<string> stringsList, string filePath, string parentNode, string rootElementName, string currentElementName)
+        //{
+        //    try
+        //    {
+        //        DepIdentifierUtils.WriteTextInLog(rootElementName);
+        //        // Load existing XML document if it exists, otherwise create a new one
+        //        XmlDocument xmlDoc = new XmlDocument();
+        //        if (File.Exists(filePath))
+        //        {
+        //            xmlDoc.Load(filePath);
+        //        }
+        //        else
+        //        {
+        //            XmlDeclaration xmlDeclaration = xmlDoc.CreateXmlDeclaration("1.0", "UTF-8", null);
+        //            XmlElement root = xmlDoc.CreateElement(parentNode);
+        //            xmlDoc.AppendChild(root);
+        //            xmlDoc.InsertBefore(xmlDeclaration, root);
+        //        }
+
+        //        // Get or create the parent node
+        //        XmlElement parentNodeElement = xmlDoc.SelectSingleNode($"//{parentNode}") as XmlElement;
+        //        if (parentNodeElement == null)
+        //        {
+        //            parentNodeElement = xmlDoc.CreateElement(parentNode);
+        //            xmlDoc.AppendChild(parentNodeElement);
+        //        }
+
+        //        // Get the root element
+        //        XmlElement rootElement = parentNodeElement.SelectSingleNode($"{rootElementName}") as XmlElement;
+        //        if (rootElement == null)
+        //        {
+        //            rootElement = xmlDoc.CreateElement(rootElementName);
+        //            parentNodeElement.AppendChild(rootElement);
+        //        }
+
+        //        if (currentElementName != "")
+        //        {
+        //            // Process each string
+        //            foreach (string str in stringsList)
+        //            {
+        //                // Check if the element already exists
+        //                XmlElement existingElement = null;
+        //                try
+        //                {
+        //                    existingElement = rootElement.SelectSingleNode($"{currentElementName}[@Name='{str}']") as XmlElement;
+
+        //                }
+        //                catch(Exception)
+        //                {
+        //                    existingElement = null;
+        //                }
+        //                if (existingElement == null)
+        //                {
+        //                    // Create a new element and add it to the root
+        //                    XmlElement newElement = xmlDoc.CreateElement(currentElementName);
+        //                    newElement.SetAttribute("Name", str);
+        //                    if (File.Exists(str))
+        //                        newElement.SetAttribute("ShortName", Path.GetFileName(str));
+        //                    rootElement.AppendChild(newElement);
+        //                }
+        //                else
+        //                {
+        //                    if (File.Exists(str))
+        //                    {
+        //                        XmlAttribute xmlNode = existingElement.GetAttributeNode("ShortName");
+        //                        if (xmlNode == null)
+        //                        {
+        //                            existingElement.SetAttribute("ShortName", Path.GetFileName(str));
+        //                        }
+        //                    }
+        //                }
+        //                // If the element exists, you can choose to do something here
+        //            }
+        //        }
+
+        //        // Save the updated XML
+        //        xmlDoc.Save(filePath);
+
+        //        DepIdentifierUtils.WriteTextInLog("XML file updated/created successfully.");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        DepIdentifierUtils.WriteTextInLog("Error updating/creating XML file: " + ex.Message);
+        //        //throw new Exception("Failed to UpdateListInFilesListXml with exception: " + ex.Message);
+        //    }
+        //}
 
         public static List<string> GetXmlData(string xml, string node, string attribute)
         {
@@ -521,13 +642,12 @@ namespace DepIdentifier
 
         public static void UpdateProjectNameForTheFilesUnderVCXProjAsync(List<string> dependenciesList, string attributeValueToSearch, string projectName)
         {
-            var xmlDoc = new XmlDocument();
-            xmlDoc.Load(DepIdentifierUtils.m_FilesListXMLPath);
+            XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
             foreach (var filepath in dependenciesList)
             {
-                XMLHelperAPIs.UpdateTheXmlAttribute(xmlDoc, "filepath", "Name", filepath, attributeValueToSearch, projectName);
+                XMLHelperAPIs.UpdateTheXmlAttribute(xmlDocument, "filepath", "Name", filepath, attributeValueToSearch, projectName);
             }
-            XMLHelperAPIs.SaveXmlToFile(xmlDoc, DepIdentifierUtils.m_FilesListXMLPath);
+            XMLHelperAPIs.SaveXmlToFile(xmlDocument, DepIdentifierUtils.m_FilesListXMLPath);
         }
 
         public static string GetDependecyStringFromXML(XmlDocument xmlDoc, string parentElementName, string elementName, string attributeNameToSearch, string attributeValueToSearch)
@@ -560,6 +680,79 @@ namespace DepIdentifier
             }
         }
 
+        public static bool RemoveNodeFromXML(XmlDocument xmlDocument, string filePath)
+        {
+            try
+            {
+                string filter = DepIdentifierUtils.GetCurrentFilterFromFilePath(filePath);
+
+                // Get the elements with the specified name and attribute valu
+                string xPathXpression = $"//{filter}/filepath[@Name='{filePath}']";
+
+                XmlNodeList xmlNodeList = xmlDocument.DocumentElement.SelectNodes(xPathXpression);
+                if (xmlNodeList.Count > 0)
+                {
+                    foreach(XmlNode xmlNode in xmlNodeList)
+                    {
+                        XmlElement element = (XmlElement)xmlNode;
+                        string references = element.GetAttribute("References");
+                        var referencesList = references.Split(';').ToList();
+                        foreach(var referenceFilePath in referencesList)
+                        {
+                            filter = DepIdentifierUtils.GetCurrentFilterFromFilePath(referenceFilePath);
+                            xPathXpression = $"//{filter}/filepath[@Name='{referenceFilePath}']";
+                            XmlNodeList xmlReferenceNodeList = xmlDocument.DocumentElement.SelectNodes(xPathXpression);
+                            if (xmlReferenceNodeList.Count == 1)
+                            {
+                                var refElement = (XmlElement)xmlNode;
+                                string dependency = element.GetAttribute("Dependencies");
+                                dependency.Replace(filePath, "", StringComparison.OrdinalIgnoreCase);
+                                UpdateTheXmlAttributeDependenciesPathAsync(referenceFilePath, dependency.Split(";").ToList(), "");
+                            }
+                            else
+                            {
+                                DepIdentifierUtils.WriteTextInLog($"RemoveNodeFromXML: Multiple nodes found with same file path for reference: {referenceFilePath}");
+                            }
+                        }
+                        xmlDocument.RemoveChild(xmlNode);
+                    }
+
+                    
+                }
+            }
+            catch (Exception ex)
+            {
+                DepIdentifierUtils.WriteTextInLog($"Unable to RemoveNodeFromXML with exception: {ex.Message}");
+                return false;
+            }
+            XMLHelperAPIs.SaveXmlToFile(xmlDocument, DepIdentifierUtils.m_FilesListXMLPath);
+            return true;
+        }
+
+        public static bool RemoveReferencesFromDependecniesInXML(XmlDocument xmlDocument, string referenceFilePath)
+        {
+            try
+            {
+                string elementName = "filepath";
+                string attributeNameToSearch = "Name";
+                string attributeValueToSearch = referenceFilePath.ToLower();
+
+                string currentFileFilter = DepIdentifierUtils.GetCurrentFilterFromFilePath(referenceFilePath);
+                //dependentList = Utilities.GetNameAttributeValue(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "Name", file);
+                string dependentListSemiColonSeperated = XMLHelperAPIs.GetDependecyStringFromXML(xmlDocument, currentFileFilter, elementName, attributeNameToSearch, attributeValueToSearch);
+
+                dependentListSemiColonSeperated.Replace(referenceFilePath, "", StringComparison.OrdinalIgnoreCase);
+                UpdateTheXmlAttributeDependenciesPathAsync(referenceFilePath, dependentListSemiColonSeperated, "");
+            }                   
+            
+            catch (Exception ex)
+            {
+                DepIdentifierUtils.WriteTextInLog($"Unable to RemoveNodeFromXML with exception: {ex.Message}");
+                return false;
+            }
+            XMLHelperAPIs.SaveXmlToFile(xmlDocument, DepIdentifierUtils.m_FilesListXMLPath);
+            return true;
+        }
 
     }
 }

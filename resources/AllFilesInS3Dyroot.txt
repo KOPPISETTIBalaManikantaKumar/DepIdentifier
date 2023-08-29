@@ -210,6 +210,7 @@ g:\yroot\acis\include\forgn_app.hxx
 g:\yroot\acis\include\formatted_text.hxx
 g:\yroot\acis\include\ga_api.hxx
 g:\yroot\acis\include\generic_graph.hxx
+g:\yroot\acis\include\generic_progress_info.hxx
 g:\yroot\acis\include\geom_utl.hxx
 g:\yroot\acis\include\geometry.hxx
 g:\yroot\acis\include\geomhusk.err

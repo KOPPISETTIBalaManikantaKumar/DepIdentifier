@@ -102,6 +102,12 @@ namespace DepIdentifier
             ReversePatcher.CacheAllRootFiles();
             try
             {
+                //mroot_drawingsisometric
+                //mroot_projectmgmt
+                //mroot_reports
+                //sroot_tribontranslator
+                //xroot_mathkernel
+
                 if (DepIdentifierUtils.m_CachedFiltersData.Count == 0)
                 {
                     MessageBox.Show("Filters Data is empty.");
@@ -114,25 +120,27 @@ namespace DepIdentifier
                         CreateFiltersInXML();
                     }
 
-                    ReversePatcher.SetProgressBar(0, DepIdentifierUtils.m_CachedFiltersData.Count);
+                    ProgressBar progressBar = ReversePatcher.SetProgressBar(0, DepIdentifierUtils.m_CachedFiltersData.Count);
                     int counter = 0;
-                    foreach (var filterPath in DepIdentifierUtils.m_CachedFiltersData)
+                    List<string> files = new List<string> { "mroot_drawingsisometric", "mroot_projectmgmt", "mroot_reports", "sroot_tribontranslator", "xroot_mathkernel" };
+                    
+                    //foreach (var filterPath in DepIdentifierUtils.m_CachedFiltersData)
+                    foreach (var filterPath in files)
                     {
-                        counter++;
-                        ReversePatcher.IncrementProgressBar(counter);
+                        ReversePatcher.IncrementProgressBar(progressBar, counter++);
                         //Get Filters Data from the Res file and later use it to add the xmlDirectoryPath
                         List<string> filesToAddInXML = DepIdentifierUtils.GetAllFilesFromSelectedRoot(DepIdentifierUtils.GetSpecificCachedRootList(filterPath), filterPath);
                        // filesToAddInXML = DepIdentifierUtils.FilterFilePathsByExtensions(filesToAddInXML, DepIdentifierUtils.IncludedExtensions);
 
                         XMLHelperAPIs.CreateOrUpdateListXml(filesToAddInXML, DepIdentifierUtils.m_FilesListXMLPath, "filtersdata", filterPath.Replace("\\", "_"), "filepath");
                     }
+                    ReversePatcher.ProgressBarVisibility(progressBar, false);
                 }
             }
             catch (Exception ex)
             {
                 throw new Exception($"Error occurred while creating files list template xml with exception: {ex.Message}");
             }
-            ReversePatcher.ProgressBarVisibility(false);
         }
 
     }

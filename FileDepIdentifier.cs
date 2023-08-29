@@ -15,7 +15,7 @@ namespace DepIdentifier
 
         public static List<string> GetTheFileDependencies(string filePath, string folder, string filesListXMLPath = "")
         {
-            DepIdentifierUtils.WriteTextInLog("Identifying " + filePath + " Dependencies.");
+            DepIdentifierUtils.WriteTextInLog("Computing " + filePath + " Dependencies.");
             List<string> dependentFiles = new List<string>();
             try
             {
@@ -386,8 +386,10 @@ namespace DepIdentifier
             return dependencies;
         }
 
-        public static List<string> GetDependencyDataOfGivenFile(string file, XmlDocument xmlDoc, bool isRecompute = false, string currentFileFilter = "")
+        public static List<string> GetDependencyDataOfGivenFile(string file, bool isRecompute = false, string currentFileFilter = "")
         {
+            if (file.Contains("..\\"))
+                file = Path.GetFullPath(file);
             if (!DepIdentifierUtils.IsFileExtensionAllowed(file))
             {
                 return new List<string> { "no dependencies" };
@@ -396,7 +398,7 @@ namespace DepIdentifier
             List<string> dependenicesOfCurrentFile = new List<string>();
             try
             {
-                string dependentList = GetDependencyDataOfGivenFileFromXML(file, xmlDoc);
+                string dependentList = GetDependencyDataOfGivenFileFromXML(file);
 
                 if (String.IsNullOrEmpty(dependentList) || isRecompute)
                 {
@@ -417,29 +419,37 @@ namespace DepIdentifier
             }
             catch (Exception ex) { }
             dependenicesOfCurrentFile.RemoveAll(dependenicesOfCurrentFile => string.IsNullOrEmpty(dependenicesOfCurrentFile));
-            return dependenicesOfCurrentFile;
+
+            List<string> correctedDependenciesOfCurrentFile = new List<string>();
+            foreach(var dependency in  dependenicesOfCurrentFile)
+            {
+                if (dependency.Contains("..\\"))
+                {
+                    correctedDependenciesOfCurrentFile.Add(Path.GetFullPath(dependency));
+                }
+                else
+                    correctedDependenciesOfCurrentFile.Add(dependency);
+
+            }
+            return correctedDependenciesOfCurrentFile;
                 
         }
 
-        public static string GetDependencyDataOfGivenFileFromXML(string file, XmlDocument xmlDoc)
+        public static string GetDependencyDataOfGivenFileFromXML(string file)
         {
             string dependentListSemiColonSeperated = string.Empty;
             try
             {
                 if (File.Exists(DepIdentifierUtils.m_FilesListXMLPath))
                 {
-                    if (xmlDoc == null)
-                    {
-                        xmlDoc = new XmlDocument();
-                        xmlDoc.Load(DepIdentifierUtils.m_FilesListXMLPath);
-                    }
+                    XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
                     string elementName = "filepath";
                     string attributeNameToSearch = "Name";
                     string attributeValueToSearch = file.ToLower();
 
                     string currentFileFilter = DepIdentifierUtils.GetCurrentFilterFromFilePath(file);
                     //dependentList = Utilities.GetNameAttributeValue(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "Name", file);
-                    dependentListSemiColonSeperated = XMLHelperAPIs.GetDependecyStringFromXML(xmlDoc, currentFileFilter, elementName, attributeNameToSearch, attributeValueToSearch);
+                    dependentListSemiColonSeperated = XMLHelperAPIs.GetDependecyStringFromXML(xmlDocument, currentFileFilter, elementName, attributeNameToSearch, attributeValueToSearch);
                     //dependentList = Utilities.GetNameAttributeValue(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "Name", file);
                 }
             }
@@ -450,27 +460,33 @@ namespace DepIdentifier
             return dependentListSemiColonSeperated;
         }
 
-        public static void GetFileDependenciesRecursively(List<string> m_filesForWhichDependenciesNeedToBeIdentified, XmlDocument xmlDocument)
+        public static void GetFileDependenciesRecursively(List<string> m_filesForWhichDependenciesNeedToBeIdentified)
         {
             List<string> currentListOfFilesDependencies = new List<string>();
             foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
             {
                 if (string.Compare("No Dependencies", file, StringComparison.OrdinalIgnoreCase) == 0)
                     continue;
-                if (ReversePatcher.m_DependencyDictionary.ContainsKey(file))
+                if (ReversePatcher.m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
                     continue;
 
                 string currentFileFilter = DepIdentifierUtils.GetCurrentFilterFromFilePath(file);
-                List<string> dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file, xmlDocument, currentFileFilter: currentFileFilter);
+                List<string> dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file, currentFileFilter: currentFileFilter);
 
                 currentListOfFilesDependencies.AddRange(dependenicesOfCurrentFile);
+
+                dependenicesOfCurrentFile = dependenicesOfCurrentFile.Select(item =>
+                                            item.Contains("..") && Path.IsPathRooted(item) ?
+                                            Path.GetFullPath(item) : item.ToLower())
+                                            .Distinct()
+                                            .ToList();
 
                 ReversePatcher.m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
 
                 if (dependenicesOfCurrentFile.Count > 0)
                 {
                     if (string.Compare("No Dependencies", dependenicesOfCurrentFile[0], StringComparison.OrdinalIgnoreCase) != 0)
-                        GetFileDependenciesRecursively(dependenicesOfCurrentFile, xmlDocument);
+                        GetFileDependenciesRecursively(dependenicesOfCurrentFile);
                 }
             }
         }
@@ -486,13 +502,12 @@ namespace DepIdentifier
                     // Replace this with your actual implementation to fetch additional include directories
                     // This method should return a list of strings containing additional include directories
                     // defined in the given .vcxproj file.
-                    XmlDocument xmlDoc = new XmlDocument();
-                    xmlDoc.Load(vcxprojFilePath);
+                    XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
 
-                    XmlNamespaceManager nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
+                    XmlNamespaceManager nsmgr = new XmlNamespaceManager(xmlDocument.NameTable);
                     nsmgr.AddNamespace("ns", "http://schemas.microsoft.com/developer/msbuild/2003");
 
-                    XmlNodeList includeDirsNodes = xmlDoc.SelectNodes("//ns:ClCompile/ns:AdditionalIncludeDirectories", nsmgr);
+                    XmlNodeList includeDirsNodes = xmlDocument.SelectNodes("//ns:ClCompile/ns:AdditionalIncludeDirectories", nsmgr);
 
                     foreach (XmlNode node in includeDirsNodes)
                     {
@@ -580,8 +595,7 @@ namespace DepIdentifier
             //DisplayList(importedFiles, "Imported files:");
 
             //Resolved Imported files
-            XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.Load(DepIdentifierUtils.m_FilesListXMLPath);
+            XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
 
             string projectName = XMLHelperAPIs.GetAttributeOfFilePathFromXML(xmlDocument, "Project", fileName);
             string additionalIncludeDirectories = "";

@@ -60,7 +60,6 @@ namespace DepIdentifier
             DependenciesLabel = new Label();
             DependenciesTree = new TreeView();
             SelectedFilesBtn = new Button();
-            ProgressBar = new ProgressBar();
             menuStrip1.SuspendLayout();
             SuspendLayout();
             // 
@@ -224,19 +223,14 @@ namespace DepIdentifier
             SelectedFilesBtn.UseVisualStyleBackColor = true;
             SelectedFilesBtn.Click += SelectedFilesBtn_Click;
             // 
-            // ProgressBar
-            // 
-            ProgressBar.Location = new Point(32, 824);
-            ProgressBar.Name = "ProgressBar";
-            ProgressBar.Size = new Size(1287, 23);
-            ProgressBar.TabIndex = 18;
-            // 
             // ReversePatcher
             // 
-            AutoScaleMode = AutoScaleMode.None;
+            AutoScaleDimensions = new SizeF(96F, 96F);
+            AutoScaleMode = AutoScaleMode.Dpi;
             AutoScroll = true;
+            AutoSize = true;
+            AutoSizeMode = AutoSizeMode.GrowOnly;
             ClientSize = new Size(1380, 859);
-            Controls.Add(ProgressBar);
             Controls.Add(SelectedFilesBtn);
             Controls.Add(DependenciesTree);
             Controls.Add(DependenciesLabel);
@@ -252,6 +246,7 @@ namespace DepIdentifier
             Controls.Add(FilterCombo);
             Controls.Add(menuStrip1);
             MainMenuStrip = menuStrip1;
+            MaximizeBox = false;
             Name = "ReversePatcher";
             Text = "ReversePatcher";
             menuStrip1.ResumeLayout(false);
@@ -289,9 +284,9 @@ namespace DepIdentifier
             }
         }
 
-        
 
-        
+
+
 
         #endregion
 
@@ -313,6 +308,5 @@ namespace DepIdentifier
         private Label DependenciesLabel;
         private TreeView DependenciesTree;
         private Button SelectedFilesBtn;
-        private static ProgressBar ProgressBar;
     }
 }
