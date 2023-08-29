@@ -337,22 +337,65 @@ namespace DepIdentifier
             int counter = 0;
             XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
 
-            var progressBar = SetProgressBar(0, m_filesForWhichDependenciesNeedToBeIdentified.Count+1);
-
-            //Resolve the vcxproj files first if any.
-            List<string> vcxProjFilesSelected = new List<string>();
-            foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
+            using (DynamicProgressBar progressForm = new DynamicProgressBar())
             {
-                if (string.Compare(".vcxproj", Path.GetExtension(file), StringComparison.OrdinalIgnoreCase) == 0)
-                {
-                    DepIdentifierUtils.WriteTextInLog($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count} Idenitying " +
-                        $"{file} dependencies");
-                    counter++;
-                    IncrementProgressBar(progressBar, counter);
-                    vcxProjFilesSelected.Add(file);
-                    //m_filesForWhichDependenciesNeedToBeIdentified.Remove(file);
+                progressForm.SetMinAndMax(0, m_filesForWhichDependenciesNeedToBeIdentified.Count);
+                //progressForm.Show();
 
+                //var progressBar = SetProgressBar(0, m_filesForWhichDependenciesNeedToBeIdentified.Count + 1);
+
+                //Resolve the vcxproj files first if any.
+                List<string> vcxProjFilesSelected = new List<string>();
+                foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
+                {
+                    if (string.Compare(".vcxproj", Path.GetExtension(file), StringComparison.OrdinalIgnoreCase) == 0)
+                    {
+                        DepIdentifierUtils.WriteTextInLog($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count} Idenitying " +
+                            $"{file} dependencies");
+                        counter++;
+                        progressForm.UpdateProgress(counter);
+                        vcxProjFilesSelected.Add(file);
+                        //m_filesForWhichDependenciesNeedToBeIdentified.Remove(file);
+
+                        List<string> dependenicesOfCurrentFile = new List<string>();
+                        if (m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            continue;
+                        }
+                        else
+                        {
+                            dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file, isRecompute: Recompute.Checked);
+                            dependenicesOfCurrentFile = dependenicesOfCurrentFile.Select(item =>
+                                                item.Contains("..") && Path.IsPathRooted(item) ?
+                                                Path.GetFullPath(item) : item.ToLower())
+                                                .Distinct()
+                                                .ToList();
+                            m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
+                            FileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile);
+                        }
+                    }
+                }
+
+                m_filesForWhichDependenciesNeedToBeIdentified.RemoveAll(x => vcxProjFilesSelected.Contains(x) == true);
+
+
+                foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
+                {
+                    counter++;
+                    progressForm.UpdateProgress(counter);
+                    //Skip the other files for which we donot identify dependencies
+                    if (!DepIdentifierUtils.IsFileExtensionAllowed(file))
+                    {
+                        //if (!m_DependencyDictionary.ContainsKey(file))
+                        if (!m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
+                            m_DependencyDictionary.Add(file, new List<string> { "No Dependencies" });
+                        continue;
+                    }
+
+                    DepIdentifierUtils.WriteTextInLog($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count}");
                     List<string> dependenicesOfCurrentFile = new List<string>();
+
+
                     if (m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
                     {
                         continue;
@@ -361,53 +404,16 @@ namespace DepIdentifier
                     {
                         dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file, isRecompute: Recompute.Checked);
                         dependenicesOfCurrentFile = dependenicesOfCurrentFile.Select(item =>
-                                            item.Contains("..") && Path.IsPathRooted(item) ?
-                                            Path.GetFullPath(item) : item.ToLower())
-                                            .Distinct()
-                                            .ToList();
+                                                item.Contains("..") && Path.IsPathRooted(item) ?
+                                                Path.GetFullPath(item) : item.ToLower())
+                                                .Distinct()
+                                                .ToList();
                         m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
                         FileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile);
                     }
                 }
+                //progressForm.Close();
             }
-
-            m_filesForWhichDependenciesNeedToBeIdentified.RemoveAll(x => vcxProjFilesSelected.Contains(x) == true);
-
-
-            foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
-            {
-                counter++;
-                IncrementProgressBar(progressBar, counter);
-                //Skip the other files for which we donot identify dependencies
-                if (!DepIdentifierUtils.IsFileExtensionAllowed(file))
-                {
-                    //if (!m_DependencyDictionary.ContainsKey(file))
-                    if (!m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
-                        m_DependencyDictionary.Add(file, new List<string> { "No Dependencies" });
-                    continue;
-                }
-
-                DepIdentifierUtils.WriteTextInLog($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count}");
-                List<string> dependenicesOfCurrentFile = new List<string>();
-
-
-                if (m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
-                {
-                    continue;
-                }
-                else
-                {
-                    dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file, isRecompute: Recompute.Checked);
-                    dependenicesOfCurrentFile = dependenicesOfCurrentFile.Select(item =>
-                                            item.Contains("..") && Path.IsPathRooted(item) ?
-                                            Path.GetFullPath(item) : item.ToLower())
-                                            .Distinct()
-                                            .ToList();
-                    m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
-                    FileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile);
-                }
-            }
-
             //Display in Tree View
             List<string> dependencyListToDisplay = new List<string>();
 
@@ -495,12 +501,12 @@ namespace DepIdentifier
         public static System.Windows.Forms.ProgressBar SetProgressBar(int minimum, int maximum)
         {
             System.Windows.Forms.ProgressBar progressBar = new System.Windows.Forms.ProgressBar();
-                progressBar.Minimum = minimum;
-                progressBar.Maximum = maximum;
-                progressBar.Location = new System.Drawing.Point(20, 50); // Set the location
-                progressBar.Size = new System.Drawing.Size(200, 30); // Set the size
-                //Controls.Add(progressBar);
-            
+            progressBar.Minimum = minimum;
+            progressBar.Maximum = maximum;
+            progressBar.Location = new System.Drawing.Point(20, 50); // Set the location
+            progressBar.Size = new System.Drawing.Size(200, 30); // Set the size
+                                                                 //Controls.Add(progressBar);
+
 
             //progressBar.Value = progress;
 
@@ -519,7 +525,7 @@ namespace DepIdentifier
         }
         public static void IncrementProgressBar(System.Windows.Forms.ProgressBar progressBar, int incrementedValue)
         {
-            if(incrementedValue >= progressBar.Minimum && incrementedValue <= progressBar.Maximum)
+            if (incrementedValue >= progressBar.Minimum && incrementedValue <= progressBar.Maximum)
                 progressBar.Value = incrementedValue;
         }
         public static void ProgressBarVisibility(System.Windows.Forms.ProgressBar progressBar, bool visible)

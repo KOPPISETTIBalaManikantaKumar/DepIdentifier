@@ -119,22 +119,28 @@ namespace DepIdentifier
                     {
                         CreateFiltersInXML();
                     }
-
-                    ProgressBar progressBar = ReversePatcher.SetProgressBar(0, DepIdentifierUtils.m_CachedFiltersData.Count);
-                    int counter = 0;
-                    List<string> files = new List<string> { "mroot_drawingsisometric", "mroot_projectmgmt", "mroot_reports", "sroot_tribontranslator", "xroot_mathkernel" };
-                    
-                    //foreach (var filterPath in DepIdentifierUtils.m_CachedFiltersData)
-                    foreach (var filterPath in files)
+                    using (DynamicProgressBar progressForm = new DynamicProgressBar())
                     {
-                        ReversePatcher.IncrementProgressBar(progressBar, counter++);
-                        //Get Filters Data from the Res file and later use it to add the xmlDirectoryPath
-                        List<string> filesToAddInXML = DepIdentifierUtils.GetAllFilesFromSelectedRoot(DepIdentifierUtils.GetSpecificCachedRootList(filterPath), filterPath);
-                       // filesToAddInXML = DepIdentifierUtils.FilterFilePathsByExtensions(filesToAddInXML, DepIdentifierUtils.IncludedExtensions);
+                        progressForm.SetMinAndMax(0, DepIdentifierUtils.m_CachedFiltersData.Count);
+                        //progressForm.Show();
 
-                        XMLHelperAPIs.CreateOrUpdateListXml(filesToAddInXML, DepIdentifierUtils.m_FilesListXMLPath, "filtersdata", filterPath.Replace("\\", "_"), "filepath");
+                        // ProgressBar progressBar = ReversePatcher.SetProgressBar(0, DepIdentifierUtils.m_CachedFiltersData.Count);
+                        int counter = 0;
+                        List<string> files = new List<string> { "mroot_drawingsisometric", "mroot_projectmgmt", "mroot_reports", "sroot_tribontranslator", "xroot_mathkernel" };
+
+                        //foreach (var filterPath in DepIdentifierUtils.m_CachedFiltersData)
+                        foreach (var filterPath in files)
+                        {
+                            counter++;
+                            progressForm.UpdateProgress(counter);
+                            //Get Filters Data from the Res file and later use it to add the xmlDirectoryPath
+                            List<string> filesToAddInXML = DepIdentifierUtils.GetAllFilesFromSelectedRoot(DepIdentifierUtils.GetSpecificCachedRootList(filterPath), filterPath);
+                            // filesToAddInXML = DepIdentifierUtils.FilterFilePathsByExtensions(filesToAddInXML, DepIdentifierUtils.IncludedExtensions);
+
+                            XMLHelperAPIs.CreateOrUpdateListXml(filesToAddInXML, DepIdentifierUtils.m_FilesListXMLPath, "filtersdata", filterPath.Replace("\\", "_"), "filepath");
+                        }
+                        //progressForm.Close();
                     }
-                    ReversePatcher.ProgressBarVisibility(progressBar, false);
                 }
             }
             catch (Exception ex)

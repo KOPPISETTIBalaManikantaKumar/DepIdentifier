@@ -17,21 +17,60 @@ namespace DepIdentifier
         public void ResolveAddedOrModifiedFilesDependencies(List<string> addedFiles)
         {
             int counter = 0;
-            ProgressBar progressBar = ReversePatcher.SetProgressBar(0, addedFiles.Count);
-            List<string> vcxProjFilesSelected = new List<string>();
-
-            XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
-
-            foreach (var file in addedFiles)
+            using (DynamicProgressBar progressForm = new DynamicProgressBar())
             {
-                ReversePatcher.IncrementProgressBar(progressBar, counter++);
+                progressForm.SetMinAndMax(0, addedFiles.Count);
+                //progressForm.Show();
+                
+                List<string> vcxProjFilesSelected = new List<string>();
 
-                if (string.Compare(".vcxproj", Path.GetExtension(file), StringComparison.OrdinalIgnoreCase) == 0)
+                XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
+
+                foreach (var file in addedFiles)
                 {
-                    vcxProjFilesSelected.Add(file);
-                    //m_filesForWhichDependenciesNeedToBeIdentified.Remove(file);
+                    counter++;
+                    progressForm.UpdateProgress(counter);
 
+                    if (string.Compare(".vcxproj", Path.GetExtension(file), StringComparison.OrdinalIgnoreCase) == 0)
+                    {
+                        vcxProjFilesSelected.Add(file);
+                        //m_filesForWhichDependenciesNeedToBeIdentified.Remove(file);
+
+                        List<string> dependenicesOfCurrentFile = new List<string>();
+                        if (m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            continue;
+                        }
+                        else
+                        {
+                            dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file);
+                            dependenicesOfCurrentFile = dependenicesOfCurrentFile.Select(item =>
+                                                item.Contains("..") && Path.IsPathRooted(item) ?
+                                                Path.GetFullPath(item) : item.ToLower())
+                                                .Distinct()
+                                                .ToList();
+                            m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
+                            FileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile);
+                        }
+                    }
+                }
+
+                addedFiles.RemoveAll(x => vcxProjFilesSelected.Contains(x) == true);
+
+                foreach (var file in addedFiles)
+                {
+                    //Skip the other files for which we donot identify dependencies
+                    if (!DepIdentifierUtils.IsFileExtensionAllowed(file))
+                    {
+                        if (!m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
+                            m_DependencyDictionary.Add(file, new List<string> { "No Dependencies" });
+                        continue;
+                    }
+
+                    DepIdentifierUtils.WriteTextInLog($"-->{counter}/{addedFiles.Count}");
                     List<string> dependenicesOfCurrentFile = new List<string>();
+
+
                     if (m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
                     {
                         continue;
@@ -40,47 +79,15 @@ namespace DepIdentifier
                     {
                         dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file);
                         dependenicesOfCurrentFile = dependenicesOfCurrentFile.Select(item =>
-                                            item.Contains("..") && Path.IsPathRooted(item) ?
-                                            Path.GetFullPath(item) : item.ToLower())
-                                            .Distinct()
-                                            .ToList();
+                                                item.Contains("..") && Path.IsPathRooted(item) ?
+                                                Path.GetFullPath(item) : item.ToLower())
+                                                .Distinct()
+                                                .ToList();
                         m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
                         FileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile);
                     }
                 }
-            }
-
-            addedFiles.RemoveAll(x => vcxProjFilesSelected.Contains(x) == true);
-
-            foreach (var file in addedFiles)
-            {
-                //Skip the other files for which we donot identify dependencies
-                if (!DepIdentifierUtils.IsFileExtensionAllowed(file))
-                {
-                    if (!m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
-                        m_DependencyDictionary.Add(file, new List<string> { "No Dependencies" });
-                    continue;
-                }
-
-                DepIdentifierUtils.WriteTextInLog($"-->{counter}/{addedFiles.Count}");
-                List<string> dependenicesOfCurrentFile = new List<string>();
-
-
-                if (m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
-                {
-                    continue;
-                }
-                else
-                {
-                    dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file);
-                    dependenicesOfCurrentFile = dependenicesOfCurrentFile.Select(item =>
-                                            item.Contains("..") && Path.IsPathRooted(item) ?
-                                            Path.GetFullPath(item) : item.ToLower())
-                                            .Distinct()
-                                            .ToList();
-                    m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
-                    FileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile);
-                }
+                //progressForm.Close();
             }
         }
 

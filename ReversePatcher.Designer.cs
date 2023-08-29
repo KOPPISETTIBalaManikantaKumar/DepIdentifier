@@ -60,6 +60,7 @@ namespace DepIdentifier
             DependenciesLabel = new Label();
             DependenciesTree = new TreeView();
             SelectedFilesBtn = new Button();
+            FilterLabel = new Label();
             menuStrip1.SuspendLayout();
             SuspendLayout();
             // 
@@ -102,7 +103,7 @@ namespace DepIdentifier
             // FilterCombo
             // 
             FilterCombo.FormattingEnabled = true;
-            FilterCombo.Location = new Point(12, 24);
+            FilterCombo.Location = new Point(120, 25);
             FilterCombo.Name = "FilterCombo";
             FilterCombo.Size = new Size(213, 23);
             FilterCombo.TabIndex = 1;
@@ -162,7 +163,7 @@ namespace DepIdentifier
             // Recompute
             // 
             Recompute.AutoSize = true;
-            Recompute.Location = new Point(252, 28);
+            Recompute.Location = new Point(339, 28);
             Recompute.Name = "Recompute";
             Recompute.Size = new Size(169, 19);
             Recompute.TabIndex = 11;
@@ -223,14 +224,23 @@ namespace DepIdentifier
             SelectedFilesBtn.UseVisualStyleBackColor = true;
             SelectedFilesBtn.Click += SelectedFilesBtn_Click;
             // 
+            // FilterLabel
+            // 
+            FilterLabel.AutoSize = true;
+            FilterLabel.Location = new Point(18, 29);
+            FilterLabel.Name = "FilterLabel";
+            FilterLabel.Size = new Size(85, 15);
+            FilterLabel.TabIndex = 18;
+            FilterLabel.Text = "Select the filter";
+            // 
             // ReversePatcher
             // 
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
             AutoScroll = true;
             AutoSize = true;
-            AutoSizeMode = AutoSizeMode.GrowOnly;
             ClientSize = new Size(1380, 859);
+            Controls.Add(FilterLabel);
             Controls.Add(SelectedFilesBtn);
             Controls.Add(DependenciesTree);
             Controls.Add(DependenciesLabel);
@@ -308,5 +318,6 @@ namespace DepIdentifier
         private Label DependenciesLabel;
         private TreeView DependenciesTree;
         private Button SelectedFilesBtn;
+        private Label FilterLabel;
     }
 }
