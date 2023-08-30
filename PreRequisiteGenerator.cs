@@ -27,10 +27,14 @@ namespace DepIdentifier
 
                 List<string> filtersDataList = new List<string>();
 
+                int countOfFilesFromPatcher = 0;
+                List<string> allFilesInPatcher = new List<string>();
                 foreach (string line in patcherDataLines)
                 {
                     if (line.StartsWith("Filename:", StringComparison.OrdinalIgnoreCase))
                     {
+                        countOfFilesFromPatcher++;
+                        allFilesInPatcher.Add(line);
                         string path = line.Substring("Filename:".Length).Trim();
                         string virtualDrive = DepIdentifierUtils.GetReplacedVirtualDriveLetter(path);
                         if (virtualDrive == string.Empty)
@@ -58,6 +62,16 @@ namespace DepIdentifier
                         filtersDataList.Add(virtualDriveLetter + "_" + path.Substring(path.LastIndexOf("\\") + 1).Trim());
                     }
                 }
+                //allFilesInPatcher.Sort();
+                //using (StreamWriter writer = new StreamWriter("D:\\Temp\\S3DAllFiles.txt"))
+                //{
+                //    foreach (string item in allFilesInPatcher)
+                //    {
+                //        writer.WriteLine(item);
+                //    }
+                //}
+
+                DepIdentifierUtils.WriteTextInLog($"Identified {countOfFilesFromPatcher} files from patcher.");
                 DepIdentifierUtils.m_CachedFiltersData = filtersDataList;
                 XMLHelperAPIs.CreateOrUpdateListXml(filtersDataList, DepIdentifierUtils.m_FiltersXMLPath, "data", "filters", "filter");
 
@@ -126,10 +140,10 @@ namespace DepIdentifier
 
                         // ProgressBar progressBar = ReversePatcher.SetProgressBar(0, DepIdentifierUtils.m_CachedFiltersData.Count);
                         int counter = 0;
-                        List<string> files = new List<string> { "mroot_drawingsisometric", "mroot_projectmgmt", "mroot_reports", "sroot_tribontranslator", "xroot_mathkernel" };
+                        //List<string> files = new List<string> { "mroot_drawingsisometric", "mroot_projectmgmt", "mroot_reports", "sroot_tribontranslator", "xroot_mathkernel" };
 
-                        //foreach (var filterPath in DepIdentifierUtils.m_CachedFiltersData)
-                        foreach (var filterPath in files)
+                        foreach (var filterPath in DepIdentifierUtils.m_CachedFiltersData)
+                        //foreach (var filterPath in files)
                         {
                             counter++;
                             progressForm.UpdateProgress(counter);
