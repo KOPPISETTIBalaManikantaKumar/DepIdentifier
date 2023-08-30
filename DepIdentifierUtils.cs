@@ -161,7 +161,11 @@ namespace DepIdentifier
                 {
                     if (dependentFile.StartsWith("g:", StringComparison.OrdinalIgnoreCase))
                     {
-                        resolvedList.Add(dependentFile);
+                        string resolvedFilePath = dependentFile;
+                        if(resolvedFilePath.Contains(".."))
+                            resolvedFilePath = Path.GetFullPath(resolvedFilePath);
+
+                        resolvedList.Add(resolvedFilePath);
                         continue;
                     }
                     else
@@ -173,6 +177,8 @@ namespace DepIdentifier
                 string combinedPath = Path.Combine(localDirectory, dependentFile.Replace("$(ClonedRepo)", "g:\\"));
                 if (File.Exists(combinedPath))
                 {
+                    if (combinedPath.Contains(".."))
+                        combinedPath = Path.GetFullPath(combinedPath);
                     resolvedList.Add(combinedPath);
                     continue;
                 }
@@ -188,6 +194,12 @@ namespace DepIdentifier
                         resolvedList.Add(clonedRepoPath);
                     else
                         DepIdentifierUtils.WriteTextInLog($"Unable to get cloned repo resolved path for {clonedRepoPath}");
+                }
+                string filePath = ChangeToClonedPathFromVirtual(dependentFile);
+                if(File.Exists(filePath))
+                {
+                    resolvedList.Add(filePath.ToLower());
+                        continue;
                 }
                 else
                 {

@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Configuration;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System;
+using System.Xml.Linq;
 
 namespace DepIdentifier
 {
@@ -415,25 +416,27 @@ namespace DepIdentifier
                 //progressForm.Close();
             }
             //Display in Tree View
+
+            BuildDependencyTree(m_DependencyDictionary, DependenciesTree);
             List<string> dependencyListToDisplay = new List<string>();
 
-            foreach (var kvp in m_DependencyDictionary)
-            {
-                if (!string.IsNullOrEmpty(kvp.Key))
-                {
-                    TreeNode fileNode = new TreeNode(kvp.Key);
-                    foreach (string dependency in kvp.Value)
-                    {
-                        if ((!string.IsNullOrEmpty(dependency) && string.Compare(dependency, "No Dependencies", StringComparison.OrdinalIgnoreCase) != 0))
-                            fileNode.Nodes.Add(dependency);
-                    }
-                    DependenciesTree.Nodes.Add(fileNode);
-                }
-            }
+            //foreach (var kvp in m_DependencyDictionary)
+            //{
+            //    if (!string.IsNullOrEmpty(kvp.Key))
+            //    {
+            //        TreeNode fileNode = new TreeNode(kvp.Key);
+            //        foreach (string dependency in kvp.Value)
+            //        {
+            //            if ((!string.IsNullOrEmpty(dependency) && string.Compare(dependency, "No Dependencies", StringComparison.OrdinalIgnoreCase) != 0))
+            //                fileNode.Nodes.Add(dependency);
+            //        }
+            //        DependenciesTree.Nodes.Add(fileNode);
+            //    }
+            //}
 
             DepIdentifierUtils.WriteTextInLog($"Time End:{DateTime.Now}");
 
-            //Display in Tree View
+            //Display in List
             foreach (var keys in m_DependencyDictionary.Keys)
             {
                 List<string> dependenciesOfCurrentKey = new List<string>();
@@ -457,6 +460,51 @@ namespace DepIdentifier
 
             CopyList.Enabled = true;
             CopyList.Visible = true;
+        }
+
+        public void BuildDependencyTree(Dictionary<string, List<string>> dependencies, System.Windows.Forms.TreeView treeView)
+        {
+            treeView.Nodes.Clear();
+
+            // Create nodes for keys and store them in a dictionary
+            Dictionary<string, TreeNode> nodeDictionary = new Dictionary<string, TreeNode>();
+            foreach (var entry in dependencies)
+            {
+                TreeNode rootNode = new TreeNode(entry.Key);
+                treeView.Nodes.Add(rootNode);
+                nodeDictionary.Add(entry.Key, rootNode);
+            }
+
+            // Populate dependency nodes
+            foreach (var entry in dependencies)
+            {
+                if (nodeDictionary.TryGetValue(entry.Key, out TreeNode rootNode))
+                {
+                    BuildDependencyNodes(entry.Value, rootNode, nodeDictionary);
+                }
+            }
+        }
+
+        private void BuildDependencyNodes(List<string> dependencies, TreeNode parentNode, Dictionary<string, TreeNode> nodeDictionary)
+        {
+            foreach (var dependency in dependencies)
+            {
+                if (string.Equals(dependency, "No Dependencies", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (nodeDictionary.TryGetValue(dependency, out TreeNode node))
+                {
+                    TreeNode newNode = new TreeNode(node.Text);  // Create a new node with the same text
+                    parentNode.Nodes.Add(newNode);
+                    List<string> textList = new List<string>();
+
+                    foreach (TreeNode childNode in node.Nodes)
+                    {
+                        textList.Add(childNode.Text);
+                    }
+                    BuildDependencyNodes(textList, newNode, nodeDictionary);  // Pass the new node's nodes
+                }
+            }
         }
 
         private async void FilterCombo_SelectedIndexChanged(object sender, EventArgs e)
