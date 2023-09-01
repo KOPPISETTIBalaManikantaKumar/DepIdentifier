@@ -44,8 +44,10 @@ namespace DepIdentifier
         {
             menuStrip1 = new MenuStrip();
             fileToolStripMenuItem = new ToolStripMenuItem();
+            selectFromProjectToolStripMenuItem = new ToolStripMenuItem();
             toolsToolStripMenuItem = new ToolStripMenuItem();
             generatePrerequisiteFilesToolStripMenuItem = new ToolStripMenuItem();
+            addNewFilesToolStripMenuItem = new ToolStripMenuItem();
             helpToolStripMenuItem = new ToolStripMenuItem();
             FilterCombo = new ComboBox();
             DependenciesList = new ListBox();
@@ -61,6 +63,8 @@ namespace DepIdentifier
             DependenciesTree = new TreeView();
             SelectedFilesBtn = new Button();
             FilterLabel = new Label();
+            AddFilesRichTextBox = new RichTextBox();
+            RPProgressBar = new ProgressBar();
             menuStrip1.SuspendLayout();
             SuspendLayout();
             // 
@@ -76,13 +80,21 @@ namespace DepIdentifier
             // 
             // fileToolStripMenuItem
             // 
+            fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { selectFromProjectToolStripMenuItem });
             fileToolStripMenuItem.Name = "fileToolStripMenuItem";
             fileToolStripMenuItem.Size = new Size(37, 20);
             fileToolStripMenuItem.Text = "File";
             // 
+            // selectFromProjectToolStripMenuItem
+            // 
+            selectFromProjectToolStripMenuItem.Name = "selectFromProjectToolStripMenuItem";
+            selectFromProjectToolStripMenuItem.Size = new Size(185, 22);
+            selectFromProjectToolStripMenuItem.Text = "Select from filter files";
+            selectFromProjectToolStripMenuItem.Click += selectFromProjectToolStripMenuItem_Click;
+            // 
             // toolsToolStripMenuItem
             // 
-            toolsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { generatePrerequisiteFilesToolStripMenuItem });
+            toolsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { generatePrerequisiteFilesToolStripMenuItem, addNewFilesToolStripMenuItem });
             toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
             toolsToolStripMenuItem.Size = new Size(46, 20);
             toolsToolStripMenuItem.Text = "Tools";
@@ -93,6 +105,13 @@ namespace DepIdentifier
             generatePrerequisiteFilesToolStripMenuItem.Size = new Size(217, 22);
             generatePrerequisiteFilesToolStripMenuItem.Text = "Generate Pre-requisite Files";
             generatePrerequisiteFilesToolStripMenuItem.Click += generatePrerequisiteFilesToolStripMenuItem_Click;
+            // 
+            // addNewFilesToolStripMenuItem
+            // 
+            addNewFilesToolStripMenuItem.Name = "addNewFilesToolStripMenuItem";
+            addNewFilesToolStripMenuItem.Size = new Size(217, 22);
+            addNewFilesToolStripMenuItem.Text = "Add new files";
+            addNewFilesToolStripMenuItem.Click += addNewFilesToolStripMenuItem_Click;
             // 
             // helpToolStripMenuItem
             // 
@@ -105,18 +124,18 @@ namespace DepIdentifier
             FilterCombo.FormattingEnabled = true;
             FilterCombo.Location = new Point(120, 25);
             FilterCombo.Name = "FilterCombo";
-            FilterCombo.Size = new Size(213, 23);
+            FilterCombo.Size = new Size(213, 22);
             FilterCombo.TabIndex = 1;
             FilterCombo.SelectedIndexChanged += FilterCombo_SelectedIndexChanged;
             // 
             // DependenciesList
             // 
             DependenciesList.FormattingEnabled = true;
-            DependenciesList.ItemHeight = 15;
+            DependenciesList.ItemHeight = 14;
             DependenciesList.Location = new Point(12, 464);
             DependenciesList.Name = "DependenciesList";
             DependenciesList.SelectionMode = SelectionMode.MultiExtended;
-            DependenciesList.Size = new Size(528, 334);
+            DependenciesList.Size = new Size(528, 326);
             DependenciesList.TabIndex = 4;
             // 
             // GetDependenciesBtn
@@ -154,7 +173,7 @@ namespace DepIdentifier
             // SelectedFilesListBox
             // 
             SelectedFilesListBox.FormattingEnabled = true;
-            SelectedFilesListBox.ItemHeight = 15;
+            SelectedFilesListBox.ItemHeight = 14;
             SelectedFilesListBox.Location = new Point(572, 110);
             SelectedFilesListBox.Name = "SelectedFilesListBox";
             SelectedFilesListBox.Size = new Size(778, 214);
@@ -165,7 +184,7 @@ namespace DepIdentifier
             Recompute.AutoSize = true;
             Recompute.Location = new Point(339, 28);
             Recompute.Name = "Recompute";
-            Recompute.Size = new Size(169, 19);
+            Recompute.Size = new Size(173, 18);
             Recompute.TabIndex = 11;
             Recompute.Text = "Re-compute Dependencies";
             Recompute.UseVisualStyleBackColor = true;
@@ -175,7 +194,7 @@ namespace DepIdentifier
             FilesList.AutoSize = true;
             FilesList.Location = new Point(11, 51);
             FilesList.Name = "FilesList";
-            FilesList.Size = new Size(184, 15);
+            FilesList.Size = new Size(194, 14);
             FilesList.TabIndex = 12;
             FilesList.Tag = "";
             FilesList.Text = "Select the files from the below list";
@@ -185,7 +204,7 @@ namespace DepIdentifier
             DependencyListLabel.AutoSize = true;
             DependencyListLabel.Location = new Point(11, 440);
             DependencyListLabel.Name = "DependencyListLabel";
-            DependencyListLabel.Size = new Size(149, 15);
+            DependencyListLabel.Size = new Size(151, 14);
             DependencyListLabel.TabIndex = 13;
             DependencyListLabel.Text = "Complete Dependency List";
             // 
@@ -194,7 +213,7 @@ namespace DepIdentifier
             SelectedFilesLabel.AutoSize = true;
             SelectedFilesLabel.Location = new Point(572, 92);
             SelectedFilesLabel.Name = "SelectedFilesLabel";
-            SelectedFilesLabel.Size = new Size(77, 15);
+            SelectedFilesLabel.Size = new Size(84, 14);
             SelectedFilesLabel.TabIndex = 14;
             SelectedFilesLabel.Text = "Selected Files";
             // 
@@ -203,7 +222,7 @@ namespace DepIdentifier
             DependenciesLabel.AutoSize = true;
             DependenciesLabel.Location = new Point(572, 330);
             DependenciesLabel.Name = "DependenciesLabel";
-            DependenciesLabel.Size = new Size(105, 15);
+            DependenciesLabel.Size = new Size(112, 14);
             DependenciesLabel.TabIndex = 15;
             DependenciesLabel.Text = "Dependencies Tree";
             // 
@@ -229,9 +248,26 @@ namespace DepIdentifier
             FilterLabel.AutoSize = true;
             FilterLabel.Location = new Point(18, 29);
             FilterLabel.Name = "FilterLabel";
-            FilterLabel.Size = new Size(85, 15);
+            FilterLabel.Size = new Size(89, 14);
             FilterLabel.TabIndex = 18;
             FilterLabel.Text = "Select the filter";
+            // 
+            // AddFilesRichTextBox
+            // 
+            AddFilesRichTextBox.Location = new Point(12, 69);
+            AddFilesRichTextBox.Name = "AddFilesRichTextBox";
+            AddFilesRichTextBox.Size = new Size(529, 368);
+            AddFilesRichTextBox.TabIndex = 19;
+            AddFilesRichTextBox.Text = "";
+            AddFilesRichTextBox.Visible = false;
+            // 
+            // RPProgressBar
+            // 
+            RPProgressBar.Location = new Point(48, 822);
+            RPProgressBar.Name = "RPProgressBar";
+            RPProgressBar.Size = new Size(1269, 23);
+            RPProgressBar.TabIndex = 20;
+            RPProgressBar.Visible = false;
             // 
             // ReversePatcher
             // 
@@ -239,7 +275,10 @@ namespace DepIdentifier
             AutoScaleMode = AutoScaleMode.Dpi;
             AutoScroll = true;
             AutoSize = true;
+            BackColor = SystemColors.ButtonFace;
             ClientSize = new Size(1380, 859);
+            Controls.Add(RPProgressBar);
+            Controls.Add(AddFilesRichTextBox);
             Controls.Add(FilterLabel);
             Controls.Add(SelectedFilesBtn);
             Controls.Add(DependenciesTree);
@@ -255,6 +294,8 @@ namespace DepIdentifier
             Controls.Add(DependenciesList);
             Controls.Add(FilterCombo);
             Controls.Add(menuStrip1);
+            Font = new Font("Calibri", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            FormBorderStyle = FormBorderStyle.Fixed3D;
             MainMenuStrip = menuStrip1;
             MaximizeBox = false;
             Name = "ReversePatcher";
@@ -319,5 +360,9 @@ namespace DepIdentifier
         private TreeView DependenciesTree;
         private Button SelectedFilesBtn;
         private Label FilterLabel;
+        private ToolStripMenuItem addNewFilesToolStripMenuItem;
+        private RichTextBox AddFilesRichTextBox;
+        private ToolStripMenuItem selectFromProjectToolStripMenuItem;
+        private ProgressBar RPProgressBar;
     }
 }

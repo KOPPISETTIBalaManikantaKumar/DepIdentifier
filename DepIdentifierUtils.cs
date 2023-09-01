@@ -10,15 +10,7 @@ namespace DepIdentifier
     public static class DepIdentifierUtils
     {
         #region required memberVaraibles
-        public static List<string> patcherDataLines = new List<string>();
-        public static string m_PatcherFilePath = ConfigurationManager.AppSettings["PatcherFilePath"];
-        public static string m_AllS3DDirectoriesFilePath = ReversePatcher.resourcePath;
-        public static string m_FiltersXMLPath = ReversePatcher.resourcePath + "\\filtersdata.xml";
-        public static string m_FilesListXMLPath = ReversePatcher.resourcePath + "\\filesList.xml";
-        public static List<string> m_CachedFiltersData = new List<string>();
 
-        private static string commonFilesString = ConfigurationManager.AppSettings["Commonfiles"];
-        public static List<string> Commonfiles = commonFilesString.Split(new[] { "," }, StringSplitOptions.None).ToList();
 
         //new List<string> { "oaidl.idl", "ocidl.idl", "atlbase.h", "atlcom.h", "statreg.h", "wtypes.idl", "comdef.h",
         //                                                            "math.h", "initguid.h", "objbase.h", "share.h", "olectl.h", "oledb.h", "OLEDBERR.h",
@@ -92,10 +84,18 @@ namespace DepIdentifier
         {
             try
             {
-
-                string[] filter = file.Split("\\");
-                string currentFileFilter = filter[1] + "_" + filter[2];
-                return currentFileFilter.ToLower();
+                if (file.StartsWith("g:\\", StringComparison.OrdinalIgnoreCase))
+                {
+                    string[] filter = file.Split("\\");
+                    string currentFileFilter = filter[1] + "_" + filter[2];
+                    return currentFileFilter.ToLower();
+                }
+                else
+                {
+                    string[] filter = file.Split("\\");
+                    string currentFileFilter = filter[0] + "root_" + filter[1];
+                    return currentFileFilter.ToLower();
+                }
             }
             catch(Exception ex)
             {
@@ -108,7 +108,7 @@ namespace DepIdentifier
         #region Public APIs to Identify dependencies, Resolving paths
         public static bool IsCommonFile(string filename)
         {
-            if (Commonfiles.Contains(Path.GetFileName(filename)))
+            if (ReversePatcher.Commonfiles.Contains(Path.GetFileName(filename)))
                 return true;
             else
                 return false;

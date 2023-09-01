@@ -19,11 +19,11 @@ namespace DepIdentifier
             try
             {
                 var virtualDriveFiles = new Dictionary<string, StringBuilder>();
-                if(!File.Exists(DepIdentifierUtils.m_PatcherFilePath))
+                if (!File.Exists(ReversePatcher.m_PatcherFilePath))
                 {
-                    MessageBox.Show($"Unabe to find the patcher in the location {DepIdentifierUtils.m_PatcherFilePath}");
+                    MessageBox.Show($"Unabe to find the patcher in the location {ReversePatcher.m_PatcherFilePath}");
                 }
-                List<string> patcherDataLines = File.ReadAllLines(DepIdentifierUtils.m_PatcherFilePath).ToList();
+                List<string> patcherDataLines = File.ReadAllLines(ReversePatcher.m_PatcherFilePath).ToList();
 
                 List<string> filtersDataList = new List<string>();
 
@@ -72,12 +72,12 @@ namespace DepIdentifier
                 //}
 
                 DepIdentifierUtils.WriteTextInLog($"Identified {countOfFilesFromPatcher} files from patcher.");
-                DepIdentifierUtils.m_CachedFiltersData = filtersDataList;
-                XMLHelperAPIs.CreateOrUpdateListXml(filtersDataList, DepIdentifierUtils.m_FiltersXMLPath, "data", "filters", "filter");
+                ReversePatcher.m_CachedFiltersData = filtersDataList;
+                XMLHelperAPIs.CreateOrUpdateListXml(filtersDataList, ReversePatcher.m_FiltersXMLPath, "data", "filters", "filter");
 
                 foreach (var (virtualDrive, stringBuilder) in virtualDriveFiles)
                 {
-                    string virtualDriveFilePath = Path.Combine(DepIdentifierUtils.m_AllS3DDirectoriesFilePath, $"AllFilesInS3D{DepIdentifierUtils.GetRootLetter(virtualDrive)}root.txt");
+                    string virtualDriveFilePath = Path.Combine(ReversePatcher.m_AllS3DDirectoriesFilePath, $"AllFilesInS3D{DepIdentifierUtils.GetRootLetter(virtualDrive)}root.txt");
                     List<string> cachedRootList = DepIdentifierUtils.GetSpecificCachedRootList(virtualDrive + "root");
                     cachedRootList = DepIdentifierUtils.ConvertToStringList(stringBuilder.ToString());
 
@@ -98,14 +98,14 @@ namespace DepIdentifier
 
         private static void CreateFiltersInXML()
         {
-            if (DepIdentifierUtils.m_CachedFiltersData.Count == 0)
+            if (ReversePatcher.m_CachedFiltersData.Count == 0)
             {
                 MessageBox.Show("Filters Data is empty.");
                 throw new Exception("Filters Data is empty.");
             }
-            foreach (var filterPath in DepIdentifierUtils.m_CachedFiltersData)
+            foreach (var filterPath in ReversePatcher.m_CachedFiltersData)
             {
-                XMLHelperAPIs.CreateOrUpdateListXml(new List<string>(), DepIdentifierUtils.m_FilesListXMLPath, "filtersdata", filterPath.Replace("//", "_"), "");
+                XMLHelperAPIs.CreateOrUpdateListXml(new List<string>(), ReversePatcher.m_FilesListXMLPath, "filtersdata", filterPath.Replace("//", "_"), "");
             }
         }
 
@@ -122,39 +122,35 @@ namespace DepIdentifier
                 //sroot_tribontranslator
                 //xroot_mathkernel
 
-                if (DepIdentifierUtils.m_CachedFiltersData.Count == 0)
+                if (ReversePatcher.m_CachedFiltersData.Count == 0)
                 {
                     MessageBox.Show("Filters Data is empty.");
                     throw new Exception("Filters Data is empty.");
                 }
                 else
                 {
-                    if (!File.Exists(DepIdentifierUtils.m_FilesListXMLPath))
+                    if (!File.Exists(ReversePatcher.m_FilesListXMLPath))
                     {
                         CreateFiltersInXML();
                     }
-                    using (DynamicProgressBar progressForm = new DynamicProgressBar())
+                    //progressForm.Show();
+
+                    // ProgressBar progressBar = ReversePatcher.SetProgressBar(0, ReversePatcher.m_CachedFiltersData.Count);
+                    int counter = 0;
+                    //List<string> files = new List<string> { "mroot_drawingsisometric", "mroot_projectmgmt", "mroot_reports", "sroot_tribontranslator", "xroot_mathkernel" };
+
+                    foreach (var filterPath in ReversePatcher.m_CachedFiltersData)
+                    //foreach (var filterPath in files)
                     {
-                        progressForm.SetMinAndMax(0, DepIdentifierUtils.m_CachedFiltersData.Count);
-                        //progressForm.Show();
+                        counter++;
+                        //Get Filters Data from the Res file and later use it to add the xmlDirectoryPath
+                        List<string> filesToAddInXML = DepIdentifierUtils.GetAllFilesFromSelectedRoot(DepIdentifierUtils.GetSpecificCachedRootList(filterPath), filterPath);
+                        // filesToAddInXML = DepIdentifierUtils.FilterFilePathsByExtensions(filesToAddInXML, DepIdentifierUtils.IncludedExtensions);
 
-                        // ProgressBar progressBar = ReversePatcher.SetProgressBar(0, DepIdentifierUtils.m_CachedFiltersData.Count);
-                        int counter = 0;
-                        //List<string> files = new List<string> { "mroot_drawingsisometric", "mroot_projectmgmt", "mroot_reports", "sroot_tribontranslator", "xroot_mathkernel" };
-
-                        foreach (var filterPath in DepIdentifierUtils.m_CachedFiltersData)
-                        //foreach (var filterPath in files)
-                        {
-                            counter++;
-                            progressForm.UpdateProgress(counter);
-                            //Get Filters Data from the Res file and later use it to add the xmlDirectoryPath
-                            List<string> filesToAddInXML = DepIdentifierUtils.GetAllFilesFromSelectedRoot(DepIdentifierUtils.GetSpecificCachedRootList(filterPath), filterPath);
-                            // filesToAddInXML = DepIdentifierUtils.FilterFilePathsByExtensions(filesToAddInXML, DepIdentifierUtils.IncludedExtensions);
-
-                            XMLHelperAPIs.CreateOrUpdateListXml(filesToAddInXML, DepIdentifierUtils.m_FilesListXMLPath, "filtersdata", filterPath.Replace("\\", "_"), "filepath");
-                        }
-                        //progressForm.Close();
+                        XMLHelperAPIs.CreateOrUpdateListXml(filesToAddInXML, ReversePatcher.m_FilesListXMLPath, "filtersdata", filterPath.Replace("\\", "_"), "filepath");
                     }
+                    //progressForm.Close();
+
                 }
             }
             catch (Exception ex)

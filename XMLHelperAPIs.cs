@@ -10,8 +10,7 @@ namespace DepIdentifier
 {
     internal static class XMLHelperAPIs
     {
-        private static string xmlFilePath;
-        private static XmlDocument cachedXmlDocument;
+        private static XmlDocument? cachedXmlDocument;
         private static DateTime lastModifiedTime;
 
         static XMLHelperAPIs()
@@ -24,14 +23,14 @@ namespace DepIdentifier
         {
             try
             {
-                DateTime currentModifiedTime = File.GetLastWriteTime(DepIdentifierUtils.m_FilesListXMLPath);
+                DateTime currentModifiedTime = File.GetLastWriteTime(ReversePatcher.m_FilesListXMLPath);
 
                 // Check if the XML file has been modified since the last access
                 if (cachedXmlDocument == null || currentModifiedTime > lastModifiedTime || ReversePatcher.isXMLSaved == true)
                 {
                     // Load the XML document
                     cachedXmlDocument = new XmlDocument();
-                    cachedXmlDocument.Load(DepIdentifierUtils.m_FilesListXMLPath);
+                    cachedXmlDocument.Load(ReversePatcher.m_FilesListXMLPath);
 
                     // Update the last modified time
                     lastModifiedTime = currentModifiedTime;
@@ -41,7 +40,7 @@ namespace DepIdentifier
             catch(Exception)
             {
                 cachedXmlDocument = new XmlDocument();
-                cachedXmlDocument.Load(DepIdentifierUtils.m_FilesListXMLPath);
+                cachedXmlDocument.Load(ReversePatcher.m_FilesListXMLPath);
             }
             return cachedXmlDocument;
         }
@@ -50,7 +49,8 @@ namespace DepIdentifier
 
         public static List<string> FindIDLDependenciesAndAddToXml(string filePath, string folder)
         {
-            List<string> parsedIdlFilePaths = FileDepIdentifier.FindIDLDependencies(filePath, folder);
+            FileDepIdentifier fileDepIdentifier = new FileDepIdentifier();
+            List<string> parsedIdlFilePaths = fileDepIdentifier.FindIDLDependencies(filePath, folder);
             string dependencyFiles = string.Empty;
             if (parsedIdlFilePaths != null && parsedIdlFilePaths.Count > 0)
             {
@@ -69,7 +69,8 @@ namespace DepIdentifier
             List<string> resolvedList = new List<string>();
             try
             {
-                List<string> dependenciesList = FileDepIdentifier.FindDependenciesInADOtHCppAndRCFile(filePath);
+                FileDepIdentifier fileDepIdentifier = new FileDepIdentifier();
+                List<string> dependenciesList = fileDepIdentifier.FindDependenciesInADOtHCppAndRCFile(filePath);
                 if (dependenciesList != null && dependenciesList.Count > 0)
                 {
                     XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
@@ -101,28 +102,29 @@ namespace DepIdentifier
             List<string> resolvedList = new List<string>();
             try
             {
-                List<string> dependenciesList = FileDepIdentifier.FindDependenciesInVcxprojFiles(filePath);
+                FileDepIdentifier fileDepIdentifier = new FileDepIdentifier();
+                List<string> dependenciesList = fileDepIdentifier.FindDependenciesInVcxprojFiles(filePath);
                 
                 if (dependenciesList != null && dependenciesList.Count > 0)
                 {
-                    List<string> propsDependencies = FileDepIdentifier.FindPropsFileDependenciesInVcxprojFiles(filePath);
+                    List<string> propsDependencies = fileDepIdentifier.FindPropsFileDependenciesInVcxprojFiles(filePath);
 
                     string additionalIncludeDirs = string.Empty;
                     List<string> additionalIncludeDirsList = new List<string>();
                     propsDependencies = DepIdentifierUtils.ResolveFromLocalDirectoryOrPatcher(projectFilePath: filePath, propsDependencies, false);
                     foreach (string propFileDependency in propsDependencies)
                     {
-                        additionalIncludeDirsList.AddRange(FileDepIdentifier.FindAdditionalIncludeDirectorisInAPropFile(propFileDependency, folder, filesListXMLPath));
+                        additionalIncludeDirsList.AddRange(fileDepIdentifier.FindAdditionalIncludeDirectorisInAPropFile(propFileDependency, folder, filesListXMLPath));
                     }
                     //props file
 
-                    additionalIncludeDirsList.AddRange(FileDepIdentifier.FindAdditionalIncludeDirectoriesOfVCXproj(filePath));
+                    additionalIncludeDirsList.AddRange(fileDepIdentifier.FindAdditionalIncludeDirectoriesOfVCXproj(filePath));
 
                     additionalIncludeDirs = string.Join(";", DepIdentifierUtils.ResolveAdditionalDirectoriesInList(additionalIncludeDirsList, filePath));
 
                     XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
                     UpdateTheXmlAttribute(xmlDocument, folder.Replace("//", "_") + "/filepath", "Name", filePath, "AdditionalIncludeDirectories", additionalIncludeDirs);
-                    XMLHelperAPIs.SaveXmlToFile(xmlDocument, DepIdentifierUtils.m_FilesListXMLPath);
+                    XMLHelperAPIs.SaveXmlToFile(xmlDocument, ReversePatcher.m_FilesListXMLPath);
 
                     resolvedList = DepIdentifierUtils.ResolveFromLocalDirectoryOrPatcher(filePath, dependenciesList);
 
@@ -147,7 +149,8 @@ namespace DepIdentifier
             List<string> dependenciesList = new List<string>();
             try
             {
-                dependenciesList = FileDepIdentifier.FindVBPFileDependencies(filePath);
+                FileDepIdentifier fileDepIdentifier = new FileDepIdentifier();
+                dependenciesList = fileDepIdentifier.FindVBPFileDependencies(filePath);
                 if (dependenciesList != null && dependenciesList.Count > 0)
                 {
                     //resolvedList = ResolveFromLocalDirectoryOrPatcher(filePath, dependenciesList, fromPatcher: true);
@@ -172,7 +175,8 @@ namespace DepIdentifier
             List<string> resolvedList = new List<string>();
             try
             {
-                List<string> dependencies = FileDepIdentifier.FindLstDependencies(filePath);
+                FileDepIdentifier fileDepIdentifier = new FileDepIdentifier();
+                List<string> dependencies = fileDepIdentifier.FindLstDependencies(filePath);
 
                 if (dependencies != null && dependencies.Count > 0)
                 {
@@ -198,7 +202,8 @@ namespace DepIdentifier
             List<string> dependencies = new List<string>();
             try
             {
-                dependencies = FileDepIdentifier.FindWixProjDependenices(filePath, folder, filesListXMLPath);
+                FileDepIdentifier fileDepIdentifier = new FileDepIdentifier();
+                dependencies = fileDepIdentifier.FindWixProjDependenices(filePath, folder, filesListXMLPath);
 
                 if (dependencies != null && dependencies.Count > 0)
                 {
@@ -224,7 +229,8 @@ namespace DepIdentifier
             List<string> dependencies = new List<string>();
             try
             {
-                dependencies = FileDepIdentifier.Find409VCXProjDependendencies(filePath, folder, filesListXMLPath);
+                FileDepIdentifier fileDepIdentifier = new FileDepIdentifier();
+                dependencies = fileDepIdentifier.Find409VCXProjDependendencies(filePath, folder, filesListXMLPath);
 
                 if (dependencies != null && dependencies.Count > 0)
                 {
@@ -250,7 +256,8 @@ namespace DepIdentifier
             List<string> resolvedList = new List<string>();
             try
             {
-                List<string> dependenciesList = FileDepIdentifier.FindDependenciesInCsprojFiles(filePath);
+                FileDepIdentifier fileDepIdentifier = new FileDepIdentifier();
+                List<string> dependenciesList = fileDepIdentifier.FindDependenciesInCsprojFiles(filePath);
                 if (dependenciesList != null && dependenciesList.Count > 0)
                 {
                     resolvedList = DepIdentifierUtils.ResolveFromLocalDirectoryOrPatcher(filePath, dependenciesList, fromPatcher: true);
@@ -312,7 +319,7 @@ namespace DepIdentifier
             }
             //Utilities.AppendNewAttribute(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "IDL", string.Join(";", m_DependencyList));
             UpdateTheXmlAttribute(xmlDocument, DepIdentifierUtils.GetCurrentFilterFromFilePath(filePath) + "/filepath", "Name", filePath, "Dependency", string.Join(";", dependencyFiles));
-            XMLHelperAPIs.SaveXmlToFile(xmlDocument, DepIdentifierUtils.m_FilesListXMLPath);
+            XMLHelperAPIs.SaveXmlToFile(xmlDocument, ReversePatcher.m_FilesListXMLPath);
 
         }
         public static void UpdateTheXmlAttributeDependenciesPathAsync(string filePath, string dependenciesListSemicolonSeperated, string folder)
@@ -325,7 +332,7 @@ namespace DepIdentifier
             }
             //Utilities.AppendNewAttribute(xmlDoc, m_selectedFilterPath.Replace("\\", "_") + "/FilePath", "IDL", string.Join(";", m_DependencyList));
             UpdateTheXmlAttribute(xmlDocument, DepIdentifierUtils.GetCurrentFilterFromFilePath(filePath) + "/filepath", "Name", filePath, "Dependency", string.Join(";", dependenciesListSemicolonSeperated));
-            XMLHelperAPIs.SaveXmlToFile(xmlDocument, DepIdentifierUtils.m_FilesListXMLPath);
+            XMLHelperAPIs.SaveXmlToFile(xmlDocument, ReversePatcher.m_FilesListXMLPath);
         }
         
         public static void UpdateTheXmlAttributeReferencesPathAsync(string filePath, List<string> updatedParsedIdlFilePaths)
@@ -341,7 +348,7 @@ namespace DepIdentifier
                     string folder = DepIdentifierUtils.GetCurrentFilterFromFilePath(file).ToLower(); ;
                     UpdateTheXmlAttribute(xmlDocument, folder + "/filepath", "Name", file, "Reference", filePath, true);
                 }
-                XMLHelperAPIs.SaveXmlToFile(xmlDocument, DepIdentifierUtils.m_FilesListXMLPath);
+                XMLHelperAPIs.SaveXmlToFile(xmlDocument, ReversePatcher.m_FilesListXMLPath);
             }
             catch (Exception ex)
             {
@@ -462,24 +469,34 @@ namespace DepIdentifier
                     xmlDoc.AppendChild(parentNodeElement);
                 }
 
-                XmlElement rootElement = parentNodeElement.SelectSingleNode($"{rootElementName}") as XmlElement;
-                if (rootElement == null)
+                XmlElement? rootElement = null;
+                if (rootElementName != "")
                 {
-                    rootElement = xmlDoc.CreateElement(rootElementName);
-                    parentNodeElement.AppendChild(rootElement);
+                    rootElement = parentNodeElement.SelectSingleNode($"{rootElementName}") as XmlElement;
+                    if (rootElement == null)
+                    {
+                        rootElement = xmlDoc.CreateElement(rootElementName);
+                        parentNodeElement.AppendChild(rootElement);
+                    }
                 }
-
                 if (!string.IsNullOrEmpty(currentElementName))
                 {
                     foreach (string str in stringsList)
                     {
-                        if (string.Equals("g:\\kroot\\commonroute\\testing\\doc\\new_atp's_testplan.xls", str, StringComparison.OrdinalIgnoreCase))
-                        {
-                            // Do something specific for this case, if needed
-                        }
                         XmlElement existingElement = null;
                         try
                         {
+                            if (rootElementName == "")
+                            {
+                                rootElementName = DepIdentifierUtils.GetCurrentFilterFromFilePath(str);
+
+                                rootElement = parentNodeElement.SelectSingleNode($"{rootElementName}") as XmlElement;
+                                if (rootElement == null)
+                                {
+                                    rootElement = xmlDoc.CreateElement(rootElementName);
+                                    parentNodeElement.AppendChild(rootElement);
+                                }
+                            }
                             existingElement = rootElement.SelectSingleNode($"{currentElementName}[@Name='{str}']") as XmlElement;
 
                         }
@@ -514,7 +531,7 @@ namespace DepIdentifier
                 }
 
                 xmlDoc.Save(filePath);
-                if (filePath == DepIdentifierUtils.m_FilesListXMLPath)
+                if (filePath == ReversePatcher.m_FilesListXMLPath)
                     ReversePatcher.isXMLSaved = true;
 
                 DepIdentifierUtils.WriteTextInLog("XML file updated/created successfully.");
@@ -647,7 +664,7 @@ namespace DepIdentifier
             {
                 XMLHelperAPIs.UpdateTheXmlAttribute(xmlDocument, "filepath", "Name", filepath, attributeValueToSearch, projectName);
             }
-            XMLHelperAPIs.SaveXmlToFile(xmlDocument, DepIdentifierUtils.m_FilesListXMLPath);
+            XMLHelperAPIs.SaveXmlToFile(xmlDocument, ReversePatcher.m_FilesListXMLPath);
         }
 
         public static string GetDependecyStringFromXML(XmlDocument xmlDoc, string parentElementName, string elementName, string attributeNameToSearch, string attributeValueToSearch)
@@ -725,7 +742,7 @@ namespace DepIdentifier
                 DepIdentifierUtils.WriteTextInLog($"Unable to RemoveNodeFromXML with exception: {ex.Message}");
                 return false;
             }
-            XMLHelperAPIs.SaveXmlToFile(xmlDocument, DepIdentifierUtils.m_FilesListXMLPath);
+            XMLHelperAPIs.SaveXmlToFile(xmlDocument, ReversePatcher.m_FilesListXMLPath);
             return true;
         }
 
@@ -750,7 +767,7 @@ namespace DepIdentifier
                 DepIdentifierUtils.WriteTextInLog($"Unable to RemoveNodeFromXML with exception: {ex.Message}");
                 return false;
             }
-            XMLHelperAPIs.SaveXmlToFile(xmlDocument, DepIdentifierUtils.m_FilesListXMLPath);
+            XMLHelperAPIs.SaveXmlToFile(xmlDocument, ReversePatcher.m_FilesListXMLPath);
             return true;
         }
 

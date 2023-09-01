@@ -13,7 +13,7 @@ namespace DepIdentifier
     {
         #region public APIS
 
-        public static List<string> GetTheFileDependencies(string filePath, string folder, string filesListXMLPath = "")
+        public List<string> GetTheFileDependencies(string filePath, string folder, string filesListXMLPath = "")
         {
             DepIdentifierUtils.WriteTextInLog("Computing " + filePath + " Dependencies.");
             List<string> dependentFiles = new List<string>();
@@ -71,7 +71,7 @@ namespace DepIdentifier
             return dependentFiles;
         }
 
-        public static List<string> FindIDLDependencies(string idlFileName, string folder)
+        public List<string> FindIDLDependencies(string idlFileName, string folder)
         {
             List<string> parsedIdlFilePaths = ExtractImportedFilesAndResolvePathsFromFile(idlFileName);
 
@@ -81,7 +81,7 @@ namespace DepIdentifier
             return parsedIdlFilePaths;
         }
 
-        public static List<string> FindDependenciesInADOtHCppAndRCFile(string cppFilePath)
+        public List<string> FindDependenciesInADOtHCppAndRCFile(string cppFilePath)
         {
             List<string> dependentFiles = new List<string>();
 
@@ -94,20 +94,46 @@ namespace DepIdentifier
                 //string pattern = @"#include\s*[""']([^""']+)[^""']*[""']";
                 //string pattern = @"#include\s*[""<]([^"">\\/\n]+)[>""]";
 
-                string pattern = @"^\s*#include\s*[""<]([^"">\\/\\n]+)[\"">](?![^\\n]*\\/\\*.*?\\*\\/)[^\\n]*";
+               // string pattern = @"^\s*#include\s*[""<]([^"">\\/\\n]+)[\"">](?![^\\n]*\\/\\*.*?\\*\\/)[^\\n]*";
+                string pattern = @"#include\s*""([^""]+)""";
 
+                MatchCollection finalMacthCollection;
                 // Create a regular expression object
                 Regex regex = new Regex(pattern);
 
                 // Search for matches in the file content
                 MatchCollection matches = regex.Matches(fileContent);
+                finalMacthCollection = matches;
+
+                pattern = @"#include\s*<([^>]+)>";
+
+                matches = regex.Matches(fileContent);
+                regex = new Regex(pattern);
+                foreach(var match in matches)
+                {
+                    finalMacthCollection.Append(match);
+                }
+                
+                pattern = @"#include\s*""(\.\./[^""]+)""";
+
+                matches = regex.Matches(fileContent);
+                regex = new Regex(pattern);
+                foreach(var match in matches)
+                {
+                    finalMacthCollection.Append(match);
+                }
 
                 // Extract the file names from the matches and add them to the dependentFiles list
-                foreach (Match match in matches)
+                foreach (Match match in finalMacthCollection)
                 {
                     string fileName = match.Groups[1].Value;
                     if (DepIdentifierUtils.IsValidFilenameWithExtension(fileName) && !DepIdentifierUtils.IsCommonFile(fileName) && !fileName.EndsWith("_i.c", StringComparison.OrdinalIgnoreCase))
-                        dependentFiles.Add(fileName);
+                    {
+                        if (!dependentFiles.Contains(fileName))
+                        {
+                            dependentFiles.Add(fileName);
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -118,7 +144,7 @@ namespace DepIdentifier
             return dependentFiles;
         }
 
-        public static List<string> FindDependenciesInVcxprojFiles(string vcxprojFilePath)
+        public List<string> FindDependenciesInVcxprojFiles(string vcxprojFilePath)
         {
             List<string> dependencies = new List<string>();
             if (vcxprojFilePath != null)
@@ -160,7 +186,7 @@ namespace DepIdentifier
             return dependencies;
         }
 
-        public static List<string> FindPropsFileDependenciesInVcxprojFiles(string vcxprojFilePath)
+        public List<string> FindPropsFileDependenciesInVcxprojFiles(string vcxprojFilePath)
         {
             List<string> dependencies = new List<string>();
             if (vcxprojFilePath != null)
@@ -181,7 +207,7 @@ namespace DepIdentifier
             return dependencies;
         }
 
-        public static List<string> FindVBPFileDependencies(string vbpFilePath)
+        public List<string> FindVBPFileDependencies(string vbpFilePath)
         {
             List<string> vbpDependencies = new List<string>();
             List<string> classDependencies = new List<string>();
@@ -266,7 +292,7 @@ namespace DepIdentifier
             return vbpDependencies;
         }
 
-        public static List<string> FindDependenciesInCsprojFiles(string csprojFilePath)
+        public List<string> FindDependenciesInCsprojFiles(string csprojFilePath)
         {
             List<string> dependencies = new List<string>();
 
@@ -289,7 +315,7 @@ namespace DepIdentifier
             return dependencies;
         }
 
-        public static List<string> Find409VCXProjDependendencies(string filePath, string folder, string filesListXMLPath)
+        public List<string> Find409VCXProjDependendencies(string filePath, string folder, string filesListXMLPath)
         {
             List<string> dependencies = new List<string>();
 
@@ -311,7 +337,7 @@ namespace DepIdentifier
             return dependencies;
         }
 
-        public static List<string> FindLstDependencies(string filePath)
+        public List<string> FindLstDependencies(string filePath)
         {
             List<string> sqlDependencies = new List<string>();
 
@@ -337,7 +363,7 @@ namespace DepIdentifier
             return sqlDependencies;
         }
 
-        public static List<string> FindWixProjDependenices(string wixprojFilePath, string folder, string filesListXMLPath)
+        public List<string> FindWixProjDependenices(string wixprojFilePath, string folder, string filesListXMLPath)
         {
             List<string> dependencies = new List<string>();
 
@@ -355,7 +381,7 @@ namespace DepIdentifier
                 dependencies = compileItems.Select(compileItem => DepIdentifierUtils.ChangeToClonedPathFromVirtual(Path.Combine(wixprojFolder, compileItem))).ToList();
 
                 //Dictionary<string, string> variablesDictionary = DepIdentifierUtils.ExtractVariableDefinitionsFromWixProj(wixprojFilePath);
-                
+
 
                 XMLHelperAPIs.UpdateProjectNameForTheFilesUnderVCXProjAsync(compileItems, "Project", wixprojFilePath);
 
@@ -386,7 +412,7 @@ namespace DepIdentifier
             return dependencies;
         }
 
-        public static List<string> GetDependencyDataOfGivenFile(string file, bool isRecompute = false, string currentFileFilter = "")
+        public List<string> GetDependencyDataOfGivenFile(string file, bool isRecompute = false, string currentFileFilter = "")
         {
             if (file.Contains("..\\"))
                 file = Path.GetFullPath(file);
@@ -421,7 +447,7 @@ namespace DepIdentifier
             dependenicesOfCurrentFile.RemoveAll(dependenicesOfCurrentFile => string.IsNullOrEmpty(dependenicesOfCurrentFile));
 
             List<string> correctedDependenciesOfCurrentFile = new List<string>();
-            foreach(var dependency in  dependenicesOfCurrentFile)
+            foreach (var dependency in dependenicesOfCurrentFile)
             {
                 if (dependency.Contains("..\\"))
                 {
@@ -432,15 +458,15 @@ namespace DepIdentifier
 
             }
             return correctedDependenciesOfCurrentFile;
-                
+
         }
 
-        public static string GetDependencyDataOfGivenFileFromXML(string file)
+        public string GetDependencyDataOfGivenFileFromXML(string file)
         {
             string dependentListSemiColonSeperated = string.Empty;
             try
             {
-                if (File.Exists(DepIdentifierUtils.m_FilesListXMLPath))
+                if (File.Exists(ReversePatcher.m_FilesListXMLPath))
                 {
                     XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
                     string elementName = "filepath";
@@ -460,7 +486,7 @@ namespace DepIdentifier
             return dependentListSemiColonSeperated;
         }
 
-        public static void GetFileDependenciesRecursively(List<string> m_filesForWhichDependenciesNeedToBeIdentified)
+        public void GetFileDependenciesRecursively(List<string> m_filesForWhichDependenciesNeedToBeIdentified)
         {
             List<string> currentListOfFilesDependencies = new List<string>();
             foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
@@ -471,7 +497,8 @@ namespace DepIdentifier
                     continue;
 
                 string currentFileFilter = DepIdentifierUtils.GetCurrentFilterFromFilePath(file);
-                List<string> dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file, currentFileFilter: currentFileFilter);
+                FileDepIdentifier fileDepIdentifier = new FileDepIdentifier();
+                List<string> dependenicesOfCurrentFile = fileDepIdentifier.GetDependencyDataOfGivenFile(file, currentFileFilter: currentFileFilter);
 
                 currentListOfFilesDependencies.AddRange(dependenicesOfCurrentFile);
 
@@ -491,7 +518,7 @@ namespace DepIdentifier
             }
         }
 
-        public static List<string> FindAdditionalIncludeDirectoriesOfVCXproj(string vcxprojFilePath)
+        public List<string> FindAdditionalIncludeDirectoriesOfVCXproj(string vcxprojFilePath)
         {
             List<string> additionalIncludeDirs = new List<string>();
             try
@@ -532,7 +559,7 @@ namespace DepIdentifier
             return additionalIncludeDirs;
         }
 
-        public static List<string> FindAdditionalIncludeDirectorisInAPropFile(string filePath, string folder, string filesListXMLPath)
+        public List<string> FindAdditionalIncludeDirectorisInAPropFile(string filePath, string folder, string filesListXMLPath)
         {
             List<string> additionalIncludeDirectories = new List<string>();
             if (File.Exists(filePath))
@@ -585,7 +612,7 @@ namespace DepIdentifier
 
         #region private APIs
 
-        private static List<string> ExtractImportedFilesAndResolvePathsFromFile(string fileName)
+        private List<string> ExtractImportedFilesAndResolvePathsFromFile(string fileName)
         {
             List<string> importedFiles = GetImportedFiles(fileName);
 
@@ -606,7 +633,7 @@ namespace DepIdentifier
             List<string> idlFilePaths = DepIdentifierUtils.ResolveFromLocalDirectoryOrPatcher(fileName, importedFiles, fromPatcher: true, additionalIncludeDirectories: additionalIncludeDirectories);
             return idlFilePaths;
         }
-        private static List<string> GetImportedFiles(string filePath)
+        private List<string> GetImportedFiles(string filePath)
         {
             List<string> importedFiles = new List<string>();
             try
@@ -634,7 +661,7 @@ namespace DepIdentifier
             return importedFiles.Distinct().ToList();
         }
 
-        private static List<string> ExtractAllDependenciesOfCSProj(string csprojFilePath)
+        private List<string> ExtractAllDependenciesOfCSProj(string csprojFilePath)
         {
             List<string> dependencies = new List<string>();
 
@@ -657,7 +684,7 @@ namespace DepIdentifier
             return dependencies;
         }
 
-        private static List<string> ExtractDependenciesFromCsprojFile(string csprojFilePath)
+        private List<string> ExtractDependenciesFromCsprojFile(string csprojFilePath)
         {
             List<string> dependencies = new List<string>();
 

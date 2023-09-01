@@ -13,7 +13,7 @@ namespace DepIdentifier
 {
     public partial class ReversePatcher : Form
     {
-
+        bool AddNewFiles = false;
         private static string assemblyLocation = Assembly.GetExecutingAssembly().Location;
         public static string resourcePath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(assemblyLocation), "..\\..\\..\\resources"));
 
@@ -43,6 +43,16 @@ namespace DepIdentifier
 
 
         public static Dictionary<string, List<string>> m_DependencyDictionary = new Dictionary<string, List<string>>();
+
+        public static List<string> patcherDataLines = new List<string>();
+        public static string m_PatcherFilePath = ConfigurationManager.AppSettings["PatcherFilePath"];
+        public static string m_AllS3DDirectoriesFilePath = ReversePatcher.resourcePath;
+        public static string m_FiltersXMLPath = ReversePatcher.resourcePath + "\\filtersdata.xml";
+        public static string m_FilesListXMLPath = ReversePatcher.resourcePath + "\\filesList.xml";
+        public static List<string> m_CachedFiltersData = new List<string>();
+
+        private static string commonFilesString = ConfigurationManager.AppSettings["Commonfiles"];
+        public static List<string> Commonfiles = commonFilesString.Split(new[] { "," }, StringSplitOptions.None).ToList();
 
         public static List<string> GetCachedKrootFiles()
         {
@@ -122,9 +132,9 @@ namespace DepIdentifier
 
         private void LoadFilters()
         {
-            if (File.Exists(DepIdentifierUtils.m_FiltersXMLPath))
+            if (File.Exists(m_FiltersXMLPath))
             {
-                var list = MainDirectoriesInfo = XMLHelperAPIs.GetXmlData(DepIdentifierUtils.m_FiltersXMLPath, "data/filters", "Name");
+                var list = MainDirectoriesInfo = XMLHelperAPIs.GetXmlData(m_FiltersXMLPath, "data/filters", "Name");
                 foreach (var item in list)
                 {
                     FilterCombo.Items.Add(item);
@@ -281,7 +291,7 @@ namespace DepIdentifier
                 Stopwatch stopWatch = Stopwatch.StartNew();
                 stopWatch.Start();
                 DialogResult result = DialogResult.Yes;
-                if (File.Exists(DepIdentifierUtils.m_AllS3DDirectoriesFilePath + "AllFilesInS3Dmroot.txt") || File.Exists(DepIdentifierUtils.m_FiltersXMLPath) || File.Exists(DepIdentifierUtils.m_FilesListXMLPath))
+                if (File.Exists(m_AllS3DDirectoriesFilePath + "AllFilesInS3Dmroot.txt") || File.Exists(m_FiltersXMLPath) || File.Exists(m_FilesListXMLPath))
                 {
                     result = MessageBox.Show("The Prerequisite Files already exist.. Do you want to continue?", "DepIdentifier", MessageBoxButtons.YesNo);
                 }
@@ -304,120 +314,152 @@ namespace DepIdentifier
 
         private void SelectedFilesBtn_Click(object sender, EventArgs e)
         {
-            bool anyCheckBoxChecked = IsAnyCheckBoxChecked(ProjectsTreeView.Nodes);
-
-            if (anyCheckBoxChecked)
+            m_filesForWhichDependenciesNeedToBeIdentified.Clear();
+            if (ProjectsTreeView.Visible)
             {
-                List<string> currentSelectedFilePaths = new List<string>();
-                GetCheckedFilePaths(ProjectsTreeView.Nodes, currentSelectedFilePaths);
-                SelectedFilesListBox.Items.Clear();
-                currentSelectedFilePaths.Sort();
-                SelectedFilesListBox.Items.AddRange(currentSelectedFilePaths.ToArray());
-                GetDependenciesBtn.Enabled = true;
-                MessageBox.Show($"{currentSelectedFilePaths.Count} files selected.");
+                bool anyCheckBoxChecked = IsAnyCheckBoxChecked(ProjectsTreeView.Nodes);
+
+                if (anyCheckBoxChecked)
+                {
+                    List<string> currentSelectedFilePaths = new List<string>();
+                    GetCheckedFilePaths(ProjectsTreeView.Nodes, currentSelectedFilePaths);
+                    SelectedFilesListBox.Items.Clear();
+                    currentSelectedFilePaths.Sort();
+                    SelectedFilesListBox.Items.AddRange(currentSelectedFilePaths.ToArray());
+                    GetDependenciesBtn.Enabled = true;
+                    MessageBox.Show($"{currentSelectedFilePaths.Count} files selected.");
+                }
+                else
+                    GetDependenciesBtn.Enabled = false;
+            }
+            else if (AddNewFiles == true)
+            {
+                XMLHelperAPIs.CreateOrUpdateListXml(m_filesForWhichDependenciesNeedToBeIdentified, ReversePatcher.m_FilesListXMLPath, "filtersdata", "", "filepath");
+
+                m_filesForWhichDependenciesNeedToBeIdentified = AddFilesRichTextBox.Text.Split("\n").ToList();
+                if (m_filesForWhichDependenciesNeedToBeIdentified.Count > 0)
+                {
+                    SelectedFilesListBox.Items.Clear();
+                    SelectedFilesListBox.Items.AddRange(m_filesForWhichDependenciesNeedToBeIdentified.ToArray());
+                    GetDependenciesBtn.Enabled = true;
+                    MessageBox.Show($"{m_filesForWhichDependenciesNeedToBeIdentified.Count} files selected.");
+                }
+                else
+                    GetDependenciesBtn.Enabled = false;
             }
             else
                 GetDependenciesBtn.Enabled = false;
-
         }
 
         private void GetDependencies_Click(object sender, EventArgs e)
         {
+            
+
             Cursor.Current = Cursors.WaitCursor;
             DepIdentifierUtils.WriteTextInLog($"Time start:{DateTime.Now}");
             DependenciesTree.Nodes.Clear();
             DependenciesList.Items.Clear();
             m_DependencyDictionary = new Dictionary<string, List<string>>();
-            m_filesForWhichDependenciesNeedToBeIdentified.Clear();
-            List<string> currentSelectedFilePaths = new List<string>();
-            GetCheckedFilePaths(ProjectsTreeView.Nodes, currentSelectedFilePaths);
+            
 
-            m_filesForWhichDependenciesNeedToBeIdentified = currentSelectedFilePaths;
+            if (ProjectsTreeView.Visible == true)
+            {
+                List<string> currentSelectedFilePaths = new List<string>();
+                GetCheckedFilePaths(ProjectsTreeView.Nodes, currentSelectedFilePaths);
+                m_filesForWhichDependenciesNeedToBeIdentified = currentSelectedFilePaths;
+            }
+            if (m_filesForWhichDependenciesNeedToBeIdentified.Count == 0)
+                return;
+
+            RPProgressBar.Visible = true;
+            RPProgressBar.Value = 0;
+
+            RPProgressBar.Maximum = 0;
+            RPProgressBar.Maximum = m_filesForWhichDependenciesNeedToBeIdentified.Count;
 
             DepIdentifierUtils.WriteTextInLog($"Selected files count: {m_filesForWhichDependenciesNeedToBeIdentified.Count}");
             int counter = 0;
             XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
 
-            using (DynamicProgressBar progressForm = new DynamicProgressBar())
+            //progressForm.Show();
+
+            //var progressBar = SetProgressBar(0, m_filesForWhichDependenciesNeedToBeIdentified.Count + 1);
+
+            //Resolve the vcxproj files first if any.
+            List<string> vcxProjFilesSelected = new List<string>();
+            foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
             {
-                progressForm.SetMinAndMax(0, m_filesForWhichDependenciesNeedToBeIdentified.Count);
-                //progressForm.Show();
-
-                //var progressBar = SetProgressBar(0, m_filesForWhichDependenciesNeedToBeIdentified.Count + 1);
-
-                //Resolve the vcxproj files first if any.
-                List<string> vcxProjFilesSelected = new List<string>();
-                foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
+                if (string.Compare(".vcxproj", Path.GetExtension(file), StringComparison.OrdinalIgnoreCase) == 0)
                 {
-                    if (string.Compare(".vcxproj", Path.GetExtension(file), StringComparison.OrdinalIgnoreCase) == 0)
-                    {
-                        DepIdentifierUtils.WriteTextInLog($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count} Idenitying " +
-                            $"{file} dependencies");
-                        counter++;
-                        progressForm.UpdateProgress(counter);
-                        vcxProjFilesSelected.Add(file);
-                        //m_filesForWhichDependenciesNeedToBeIdentified.Remove(file);
-
-                        List<string> dependenicesOfCurrentFile = new List<string>();
-                        if (m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
-                        {
-                            continue;
-                        }
-                        else
-                        {
-                            dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file, isRecompute: Recompute.Checked);
-                            dependenicesOfCurrentFile = dependenicesOfCurrentFile.Select(item =>
-                                                item.Contains("..") && Path.IsPathRooted(item) ?
-                                                Path.GetFullPath(item) : item.ToLower())
-                                                .Distinct()
-                                                .ToList();
-                            m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
-                            FileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile);
-                        }
-                    }
-                }
-
-                m_filesForWhichDependenciesNeedToBeIdentified.RemoveAll(x => vcxProjFilesSelected.Contains(x) == true);
-
-
-                foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
-                {
+                    RPProgressBar.Increment(1);
+                    DepIdentifierUtils.WriteTextInLog($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count} Idenitying " +
+                        $"{file} dependencies");
                     counter++;
-                    progressForm.UpdateProgress(counter);
-                    //Skip the other files for which we donot identify dependencies
-                    if (!DepIdentifierUtils.IsFileExtensionAllowed(file))
-                    {
-                        //if (!m_DependencyDictionary.ContainsKey(file))
-                        if (!m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
-                            m_DependencyDictionary.Add(file, new List<string> { "No Dependencies" });
-                        continue;
-                    }
+                    vcxProjFilesSelected.Add(file);
+                    //m_filesForWhichDependenciesNeedToBeIdentified.Remove(file);
 
-                    DepIdentifierUtils.WriteTextInLog($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count}");
                     List<string> dependenicesOfCurrentFile = new List<string>();
-
-
                     if (m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
                     {
                         continue;
                     }
                     else
                     {
-                        dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file, isRecompute: Recompute.Checked);
+                        FileDepIdentifier fileDepIdentifier = new FileDepIdentifier();
+                        dependenicesOfCurrentFile = fileDepIdentifier.GetDependencyDataOfGivenFile(file, isRecompute: Recompute.Checked);
                         dependenicesOfCurrentFile = dependenicesOfCurrentFile.Select(item =>
-                                                item.Contains("..") && Path.IsPathRooted(item) ?
-                                                Path.GetFullPath(item) : item.ToLower())
-                                                .Distinct()
-                                                .ToList();
+                                            item.Contains("..") && Path.IsPathRooted(item) ?
+                                            Path.GetFullPath(item) : item.ToLower())
+                                            .Distinct()
+                                            .ToList();
                         m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
-                        FileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile);
+                        fileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile);
                     }
                 }
-                //progressForm.Close();
             }
+
+            m_filesForWhichDependenciesNeedToBeIdentified.RemoveAll(x => vcxProjFilesSelected.Contains(x) == true);
+
+
+            foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
+            {
+                RPProgressBar.Increment(1);
+                counter++;
+                //Skip the other files for which we donot identify dependencies
+                if (!DepIdentifierUtils.IsFileExtensionAllowed(file))
+                {
+                    //if (!m_DependencyDictionary.ContainsKey(file))
+                    if (!m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
+                        m_DependencyDictionary.Add(file, new List<string> { "No Dependencies" });
+                    continue;
+                }
+
+                DepIdentifierUtils.WriteTextInLog($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count}");
+                List<string> dependenicesOfCurrentFile = new List<string>();
+
+
+                if (m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+                else
+                {
+                    FileDepIdentifier fileDepIdentifier = new FileDepIdentifier();
+                    dependenicesOfCurrentFile = fileDepIdentifier.GetDependencyDataOfGivenFile(file, isRecompute: Recompute.Checked);
+                    dependenicesOfCurrentFile = dependenicesOfCurrentFile.Select(item =>
+                                            item.Contains("..") && Path.IsPathRooted(item) ?
+                                            Path.GetFullPath(item) : item.ToLower())
+                                            .Distinct()
+                                            .ToList();
+                    m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
+                    fileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile);
+                }
+            }
+            RPProgressBar.Visible = false;
+
             //Display in Tree View
 
-            BuildDependencyTree(m_DependencyDictionary, DependenciesTree);
+            //BuildDependencyTree(m_DependencyDictionary, DependenciesTree);
             List<string> dependencyListToDisplay = new List<string>();
 
             //foreach (var kvp in m_DependencyDictionary)
@@ -581,5 +623,18 @@ namespace DepIdentifier
             progressBar.Visible = visible;
         }
         #endregion
+
+        private void addNewFilesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            AddNewFiles = true;
+            ProjectsTreeView.Visible = false;
+            AddFilesRichTextBox.Visible = true;
+        }
+
+        private void selectFromProjectToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            AddFilesRichTextBox.Visible = false;
+            ProjectsTreeView.Visible = true;
+        }
     }
 }

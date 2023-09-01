@@ -17,9 +17,7 @@ namespace DepIdentifier
         public void ResolveAddedOrModifiedFilesDependencies(List<string> addedFiles)
         {
             int counter = 0;
-            using (DynamicProgressBar progressForm = new DynamicProgressBar())
-            {
-                progressForm.SetMinAndMax(0, addedFiles.Count);
+
                 //progressForm.Show();
                 
                 List<string> vcxProjFilesSelected = new List<string>();
@@ -29,7 +27,6 @@ namespace DepIdentifier
                 foreach (var file in addedFiles)
                 {
                     counter++;
-                    progressForm.UpdateProgress(counter);
 
                     if (string.Compare(".vcxproj", Path.GetExtension(file), StringComparison.OrdinalIgnoreCase) == 0)
                     {
@@ -43,14 +40,15 @@ namespace DepIdentifier
                         }
                         else
                         {
-                            dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file);
+                            FileDepIdentifier fileDepIdentifier = new FileDepIdentifier();
+                            dependenicesOfCurrentFile = fileDepIdentifier.GetDependencyDataOfGivenFile(file);
                             dependenicesOfCurrentFile = dependenicesOfCurrentFile.Select(item =>
                                                 item.Contains("..") && Path.IsPathRooted(item) ?
                                                 Path.GetFullPath(item) : item.ToLower())
                                                 .Distinct()
                                                 .ToList();
                             m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
-                            FileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile);
+                            fileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile);
                         }
                     }
                 }
@@ -77,18 +75,19 @@ namespace DepIdentifier
                     }
                     else
                     {
-                        dependenicesOfCurrentFile = FileDepIdentifier.GetDependencyDataOfGivenFile(file);
+                        FileDepIdentifier fileDepIdentifier = new FileDepIdentifier();
+                        dependenicesOfCurrentFile = fileDepIdentifier.GetDependencyDataOfGivenFile(file);
                         dependenicesOfCurrentFile = dependenicesOfCurrentFile.Select(item =>
                                                 item.Contains("..") && Path.IsPathRooted(item) ?
                                                 Path.GetFullPath(item) : item.ToLower())
                                                 .Distinct()
                                                 .ToList();
                         m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
-                        FileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile);
+                        fileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile);
                     }
                 }
                 //progressForm.Close();
-            }
+            
         }
 
         //Deletion
