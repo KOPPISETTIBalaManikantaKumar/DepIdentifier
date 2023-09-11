@@ -75,8 +75,12 @@ namespace DepIdentifier
                 {
                     XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
                     string projectName = XMLHelperAPIs.GetAttributeOfFilePathFromXML(xmlDocument, "Project", filePath);
-                    string additionalIncludeDirectories = XMLHelperAPIs.GetAttributeOfFilePathFromXML(xmlDocument, "AdditionalIncludeDirectories", projectName);
+                    string additionalIncludeDirectories = "";
+                    if (projectName != null)
+                    {
+                        additionalIncludeDirectories = XMLHelperAPIs.GetAttributeOfFilePathFromXML(xmlDocument, "AdditionalIncludeDirectories", projectName);
 
+                    }
                     resolvedList = DepIdentifierUtils.ResolveFromLocalDirectoryOrPatcher(filePath, dependenciesList, fromPatcher: true, additionalIncludeDirectories: additionalIncludeDirectories);
 
                     resolvedList = DepIdentifierUtils.RemoveTheMIDLGeneratedFilesFromTheList(resolvedList);

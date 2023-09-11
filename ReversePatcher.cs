@@ -13,7 +13,9 @@ namespace DepIdentifier
 {
     public partial class ReversePatcher : Form
     {
-        bool AddNewFiles = false;
+        bool m_AddNewFiles = false;
+        bool m_InputFileFromText = false;
+        bool m_ShowReferences = false;
         private static string assemblyLocation = Assembly.GetExecutingAssembly().Location;
         public static string resourcePath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(assemblyLocation), "..\\..\\..\\resources"));
 
@@ -49,6 +51,7 @@ namespace DepIdentifier
         public static string m_AllS3DDirectoriesFilePath = ReversePatcher.resourcePath;
         public static string m_FiltersXMLPath = ReversePatcher.resourcePath + "\\filtersdata.xml";
         public static string m_FilesListXMLPath = ReversePatcher.resourcePath + "\\filesList.xml";
+        public static string m_HelpFilePath = ReversePatcher.resourcePath + "\\README.md";
         public static List<string> m_CachedFiltersData = new List<string>();
 
         private static string commonFilesString = ConfigurationManager.AppSettings["Commonfiles"];
@@ -101,6 +104,9 @@ namespace DepIdentifier
             //AllocConsole();
             CacheAllRootFiles();
             LoadFilters();
+            //Recompute.Visible = false;
+            RemoveFilesBtn.Visible = false;
+
         }
 
         public static void CacheAllRootFiles()
@@ -290,12 +296,11 @@ namespace DepIdentifier
 
                 Stopwatch stopWatch = Stopwatch.StartNew();
                 stopWatch.Start();
-                DialogResult result = DialogResult.Yes;
                 if (File.Exists(m_AllS3DDirectoriesFilePath + "AllFilesInS3Dmroot.txt") || File.Exists(m_FiltersXMLPath) || File.Exists(m_FilesListXMLPath))
                 {
-                    result = MessageBox.Show("The Prerequisite Files already exist.. Do you want to continue?", "DepIdentifier", MessageBoxButtons.YesNo);
+                    MessageBox.Show("The Prerequisite Files already exist.. ", "DepIdentifier");
                 }
-                if (result == DialogResult.Yes)
+                else
                 {
                     await PreRequisiteGenerator.GenerateAllS3DFilesListAndFiltersListFromPatFile();
                     PreRequisiteGenerator.CreateFilesListTemplateXML();
@@ -332,15 +337,30 @@ namespace DepIdentifier
                 else
                     GetDependenciesBtn.Enabled = false;
             }
-            else if (AddNewFiles == true)
+            else if (m_AddNewFiles == true || m_InputFileFromText == true)
             {
                 XMLHelperAPIs.CreateOrUpdateListXml(m_filesForWhichDependenciesNeedToBeIdentified, ReversePatcher.m_FilesListXMLPath, "filtersdata", "", "filepath");
 
                 m_filesForWhichDependenciesNeedToBeIdentified = AddFilesRichTextBox.Text.Split("\n").ToList();
                 if (m_filesForWhichDependenciesNeedToBeIdentified.Count > 0)
                 {
+                    List<string> resolvedFilePaths = new List<string>();
                     SelectedFilesListBox.Items.Clear();
-                    SelectedFilesListBox.Items.AddRange(m_filesForWhichDependenciesNeedToBeIdentified.ToArray());
+                    foreach (var filePath in m_filesForWhichDependenciesNeedToBeIdentified)
+                    {
+                        string file = filePath;
+                        if (!file.StartsWith("g:\\", StringComparison.OrdinalIgnoreCase))
+                        {
+                            file = DepIdentifierUtils.ChangeToClonedPathFromVirtual(filePath);
+                            resolvedFilePaths.Add(file);
+                        }
+                        else
+                            resolvedFilePaths.Add(file);
+                    }
+                    resolvedFilePaths.Sort();
+                    SelectedFilesListBox.Items.AddRange(resolvedFilePaths.ToArray());
+                    m_filesForWhichDependenciesNeedToBeIdentified = resolvedFilePaths;
+
                     GetDependenciesBtn.Enabled = true;
                     MessageBox.Show($"{m_filesForWhichDependenciesNeedToBeIdentified.Count} files selected.");
                 }
@@ -353,14 +373,12 @@ namespace DepIdentifier
 
         private void GetDependencies_Click(object sender, EventArgs e)
         {
-            
-
             Cursor.Current = Cursors.WaitCursor;
             DepIdentifierUtils.WriteTextInLog($"Time start:{DateTime.Now}");
             DependenciesTree.Nodes.Clear();
             DependenciesList.Items.Clear();
             m_DependencyDictionary = new Dictionary<string, List<string>>();
-            
+
 
             if (ProjectsTreeView.Visible == true)
             {
@@ -381,24 +399,76 @@ namespace DepIdentifier
             int counter = 0;
             XmlDocument xmlDocument = XMLHelperAPIs.GetFilesListXmlDocument();
 
-            //progressForm.Show();
-
-            //var progressBar = SetProgressBar(0, m_filesForWhichDependenciesNeedToBeIdentified.Count + 1);
-
-            //Resolve the vcxproj files first if any.
-            List<string> vcxProjFilesSelected = new List<string>();
-            foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
+            if (m_ShowReferences == true)
             {
-                if (string.Compare(".vcxproj", Path.GetExtension(file), StringComparison.OrdinalIgnoreCase) == 0)
+                foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
+                {
+                    string references = XMLHelperAPIs.GetAttributeOfFilePathFromXML(xmlDocument, "Reference", file);
+                    if (!string.IsNullOrEmpty(references))
+                    {
+                        m_DependencyDictionary.Add(file, references.Split(";").ToList());
+                    }
+                }
+            }
+            else
+            {
+                //progressForm.Show();
+
+                //var progressBar = SetProgressBar(0, m_filesForWhichDependenciesNeedToBeIdentified.Count + 1);
+
+                //Resolve the vcxproj files first if any.
+                List<string> vcxProjFilesSelected = new List<string>();
+                foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
+                {
+                    if (string.Compare(".vcxproj", Path.GetExtension(file), StringComparison.OrdinalIgnoreCase) == 0)
+                    {
+                        RPProgressBar.Increment(1);
+                        DepIdentifierUtils.WriteTextInLog($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count} Idenitying " +
+                            $"{file} dependencies");
+                        counter++;
+                        vcxProjFilesSelected.Add(file);
+                        //m_filesForWhichDependenciesNeedToBeIdentified.Remove(file);
+
+                        List<string> dependenicesOfCurrentFile = new List<string>();
+                        if (m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            continue;
+                        }
+                        else
+                        {
+                            FileDepIdentifier fileDepIdentifier = new FileDepIdentifier();
+                            dependenicesOfCurrentFile = fileDepIdentifier.GetDependencyDataOfGivenFile(file, isRecompute: Recompute.Checked);
+                            dependenicesOfCurrentFile = dependenicesOfCurrentFile.Select(item =>
+                                                item.Contains("..") && Path.IsPathRooted(item) ?
+                                                Path.GetFullPath(item) : item.ToLower())
+                                                .Distinct()
+                                                .ToList();
+                            m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
+                            fileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile, isRecomuteChecked: Recompute.Checked);
+                        }
+                    }
+                }
+
+                m_filesForWhichDependenciesNeedToBeIdentified.RemoveAll(x => vcxProjFilesSelected.Contains(x) == true);
+
+
+                foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
                 {
                     RPProgressBar.Increment(1);
-                    DepIdentifierUtils.WriteTextInLog($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count} Idenitying " +
-                        $"{file} dependencies");
                     counter++;
-                    vcxProjFilesSelected.Add(file);
-                    //m_filesForWhichDependenciesNeedToBeIdentified.Remove(file);
+                    //Skip the other files for which we donot identify dependencies
+                    if (!DepIdentifierUtils.IsFileExtensionAllowed(file))
+                    {
+                        //if (!m_DependencyDictionary.ContainsKey(file))
+                        if (!m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
+                            m_DependencyDictionary.Add(file, new List<string> { "No Dependencies" });
+                        continue;
+                    }
 
+                    DepIdentifierUtils.WriteTextInLog($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count}");
                     List<string> dependenicesOfCurrentFile = new List<string>();
+
+
                     if (m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
                     {
                         continue;
@@ -408,51 +478,13 @@ namespace DepIdentifier
                         FileDepIdentifier fileDepIdentifier = new FileDepIdentifier();
                         dependenicesOfCurrentFile = fileDepIdentifier.GetDependencyDataOfGivenFile(file, isRecompute: Recompute.Checked);
                         dependenicesOfCurrentFile = dependenicesOfCurrentFile.Select(item =>
-                                            item.Contains("..") && Path.IsPathRooted(item) ?
-                                            Path.GetFullPath(item) : item.ToLower())
-                                            .Distinct()
-                                            .ToList();
+                                                item.Contains("..") && Path.IsPathRooted(item) ?
+                                                Path.GetFullPath(item) : item.ToLower())
+                                                .Distinct()
+                                                .ToList();
                         m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
-                        fileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile);
+                        fileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile, isRecomuteChecked: Recompute.Checked);
                     }
-                }
-            }
-
-            m_filesForWhichDependenciesNeedToBeIdentified.RemoveAll(x => vcxProjFilesSelected.Contains(x) == true);
-
-
-            foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
-            {
-                RPProgressBar.Increment(1);
-                counter++;
-                //Skip the other files for which we donot identify dependencies
-                if (!DepIdentifierUtils.IsFileExtensionAllowed(file))
-                {
-                    //if (!m_DependencyDictionary.ContainsKey(file))
-                    if (!m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
-                        m_DependencyDictionary.Add(file, new List<string> { "No Dependencies" });
-                    continue;
-                }
-
-                DepIdentifierUtils.WriteTextInLog($"-->{counter}/{m_filesForWhichDependenciesNeedToBeIdentified.Count}");
-                List<string> dependenicesOfCurrentFile = new List<string>();
-
-
-                if (m_DependencyDictionary.Keys.Any(key => key.Equals(file, StringComparison.OrdinalIgnoreCase)))
-                {
-                    continue;
-                }
-                else
-                {
-                    FileDepIdentifier fileDepIdentifier = new FileDepIdentifier();
-                    dependenicesOfCurrentFile = fileDepIdentifier.GetDependencyDataOfGivenFile(file, isRecompute: Recompute.Checked);
-                    dependenicesOfCurrentFile = dependenicesOfCurrentFile.Select(item =>
-                                            item.Contains("..") && Path.IsPathRooted(item) ?
-                                            Path.GetFullPath(item) : item.ToLower())
-                                            .Distinct()
-                                            .ToList();
-                    m_DependencyDictionary.Add(file, dependenicesOfCurrentFile);
-                    fileDepIdentifier.GetFileDependenciesRecursively(dependenicesOfCurrentFile);
                 }
             }
             RPProgressBar.Visible = false;
@@ -475,6 +507,8 @@ namespace DepIdentifier
             //        DependenciesTree.Nodes.Add(fileNode);
             //    }
             //}
+
+            PopulateTreeView();
 
             DepIdentifierUtils.WriteTextInLog($"Time End:{DateTime.Now}");
 
@@ -502,6 +536,28 @@ namespace DepIdentifier
 
             CopyList.Enabled = true;
             CopyList.Visible = true;
+        }
+
+        private void PopulateTreeView()
+        {
+            DependenciesTree.Nodes.Clear();
+
+            foreach (var kvp in m_DependencyDictionary)
+            {
+                TreeNode mainNode = new TreeNode(kvp.Key);
+
+                // Handle null values and exceptions safely
+                if (kvp.Value != null)
+                {
+                    foreach (var subitem in kvp.Value)
+                    {
+                        if (string.Compare(subitem, "no dependencies", StringComparison.OrdinalIgnoreCase) != 0)
+                            mainNode.Nodes.Add(subitem);
+                    }
+                }
+
+                DependenciesTree.Nodes.Add(mainNode);
+            }
         }
 
         public void BuildDependencyTree(Dictionary<string, List<string>> dependencies, System.Windows.Forms.TreeView treeView)
@@ -626,15 +682,116 @@ namespace DepIdentifier
 
         private void addNewFilesToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            AddNewFiles = true;
+            m_ShowReferences = false;
+            m_AddNewFiles = true;
+            m_InputFileFromText = false;
             ProjectsTreeView.Visible = false;
             AddFilesRichTextBox.Visible = true;
+            GetDependenciesBtn.Visible = true;
+            GetDependenciesBtn.Text = "Get Dependencies";
+            RemoveFilesBtn.Visible = false;
+            SelectedFilesBtn.Visible = true;
+            SelectedFilesListBox.Visible = true;
         }
 
-        private void selectFromProjectToolStripMenuItem_Click(object sender, EventArgs e)
+        private void selectFromFiltersToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            AddFilesRichTextBox.Visible = false;
+            m_ShowReferences = false;
+            m_AddNewFiles = false;
+            m_InputFileFromText = false;
             ProjectsTreeView.Visible = true;
+            AddFilesRichTextBox.Visible = false;
+            FilesList.Text = "Select the files from the below list";
+            GetDependenciesBtn.Visible = true;
+            GetDependenciesBtn.Text = "Get Dependencies";
+            RemoveFilesBtn.Visible = false;
+            SelectedFilesBtn.Visible = true;
+            SelectedFilesListBox.Visible = true;
+        }
+
+        private void removeFilesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            m_ShowReferences = false;
+            m_AddNewFiles = false;
+            m_InputFileFromText = false;
+            AddFilesRichTextBox.Visible = true;
+            ProjectsTreeView.Visible = false;
+            FilesList.Text = "Add the files to be removed";
+            SelectedFilesBtn.Enabled = false;
+            GetDependenciesBtn.Visible = false;
+            RemoveFilesBtn.Visible = true;
+            SelectedFilesListBox.Visible = false;
+        }
+
+        private void inputFilesInTextToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            m_ShowReferences = false;
+            m_InputFileFromText = true;
+            m_AddNewFiles = false;
+            AddFilesRichTextBox.Visible = true;
+            ProjectsTreeView.Visible = false;
+            FilesList.Text = "Add the files for which dependencies need to be identified";
+            GetDependenciesBtn.Visible = true;
+            GetDependenciesBtn.Text = "Get Dependencies";
+            RemoveFilesBtn.Visible = false;
+            SelectedFilesBtn.Visible = true;
+            SelectedFilesListBox.Visible = true;
+        }
+
+        private void RemoveFilesBtn_Click(object sender, EventArgs e)
+        {
+            FilesListXMLModifier filesListXMLModifier = new FilesListXMLModifier();
+            m_filesForWhichDependenciesNeedToBeIdentified.Clear();
+            m_filesForWhichDependenciesNeedToBeIdentified = AddFilesRichTextBox.Text.Split("\n").ToList();
+            filesListXMLModifier.ResolveDeletedFilesDependencies(m_filesForWhichDependenciesNeedToBeIdentified);
+        }
+
+        private void aboutReversePatcherToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            HelpForm helpForm = new HelpForm();
+
+            string textContent = File.ReadAllText(m_HelpFilePath);
+            // Convert the plain text into RTF
+            string rtfContent = ConvertPlainTextToRtf(textContent);
+            // Set the rich text content in the HelpForm's RichTextBox
+            helpForm.SetRichText(rtfContent);
+
+            // Show the HelpForm as a dialog
+            helpForm.ShowDialog();
+        }
+
+        private string ConvertPlainTextToRtf(string plainText)
+        {
+            // Create an RTF header with default font and formatting
+            string rtfHeader = @"{\rtf1\ansi\deff0{\fonttbl{\f0 Times New Roman;}}";
+
+            // Replace newlines with RTF line breaks and escape special characters
+            string escapedText = plainText
+                .Replace("\\", "\\\\")
+                .Replace("{", "\\{")
+                .Replace("}", "\\}")
+                .Replace(Environment.NewLine, "\\par ");
+
+            // Combine the RTF header and the escaped text
+            string rtfContent = rtfHeader + escapedText + "}";
+
+            return rtfContent;
+        }
+
+        private void showReferencesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            m_AddNewFiles = false;
+            m_InputFileFromText = false;
+            ProjectsTreeView.Visible = true;
+            AddFilesRichTextBox.Visible = false;
+            FilesList.Text = "Select the files from the below list";
+            GetDependenciesBtn.Visible = true;
+            RemoveFilesBtn.Visible = false;
+            SelectedFilesBtn.Visible = true;
+            SelectedFilesListBox.Visible = true;
+
+            m_ShowReferences = true;
+            GetDependenciesBtn.Text = "Show References";
         }
     }
 }

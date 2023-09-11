@@ -43,12 +43,15 @@ namespace DepIdentifier
         private void InitializeComponent()
         {
             menuStrip1 = new MenuStrip();
-            fileToolStripMenuItem = new ToolStripMenuItem();
-            selectFromProjectToolStripMenuItem = new ToolStripMenuItem();
             toolsToolStripMenuItem = new ToolStripMenuItem();
-            generatePrerequisiteFilesToolStripMenuItem = new ToolStripMenuItem();
+            selectFromFiltersToolStripMenuItem = new ToolStripMenuItem();
+            inputFilesInTextToolStripMenuItem = new ToolStripMenuItem();
             addNewFilesToolStripMenuItem = new ToolStripMenuItem();
+            removeFilesToolStripMenuItem = new ToolStripMenuItem();
+            generatePrerequisiteFilesToolStripMenuItem = new ToolStripMenuItem();
+            showReferencesToolStripMenuItem = new ToolStripMenuItem();
             helpToolStripMenuItem = new ToolStripMenuItem();
+            aboutReversePatcherToolStripMenuItem = new ToolStripMenuItem();
             FilterCombo = new ComboBox();
             DependenciesList = new ListBox();
             GetDependenciesBtn = new Button();
@@ -65,46 +68,40 @@ namespace DepIdentifier
             FilterLabel = new Label();
             AddFilesRichTextBox = new RichTextBox();
             RPProgressBar = new ProgressBar();
+            RemoveFilesBtn = new Button();
             menuStrip1.SuspendLayout();
             SuspendLayout();
             // 
             // menuStrip1
             // 
             menuStrip1.GripStyle = ToolStripGripStyle.Visible;
-            menuStrip1.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, toolsToolStripMenuItem, helpToolStripMenuItem });
+            menuStrip1.Items.AddRange(new ToolStripItem[] { toolsToolStripMenuItem, helpToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
             menuStrip1.Size = new Size(1380, 24);
             menuStrip1.TabIndex = 0;
             menuStrip1.Text = "menuStrip1";
             // 
-            // fileToolStripMenuItem
-            // 
-            fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { selectFromProjectToolStripMenuItem });
-            fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-            fileToolStripMenuItem.Size = new Size(37, 20);
-            fileToolStripMenuItem.Text = "File";
-            // 
-            // selectFromProjectToolStripMenuItem
-            // 
-            selectFromProjectToolStripMenuItem.Name = "selectFromProjectToolStripMenuItem";
-            selectFromProjectToolStripMenuItem.Size = new Size(185, 22);
-            selectFromProjectToolStripMenuItem.Text = "Select from filter files";
-            selectFromProjectToolStripMenuItem.Click += selectFromProjectToolStripMenuItem_Click;
-            // 
             // toolsToolStripMenuItem
             // 
-            toolsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { generatePrerequisiteFilesToolStripMenuItem, addNewFilesToolStripMenuItem });
+            toolsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { selectFromFiltersToolStripMenuItem, inputFilesInTextToolStripMenuItem, addNewFilesToolStripMenuItem, removeFilesToolStripMenuItem, generatePrerequisiteFilesToolStripMenuItem, showReferencesToolStripMenuItem });
             toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
             toolsToolStripMenuItem.Size = new Size(46, 20);
             toolsToolStripMenuItem.Text = "Tools";
             // 
-            // generatePrerequisiteFilesToolStripMenuItem
+            // selectFromFiltersToolStripMenuItem
             // 
-            generatePrerequisiteFilesToolStripMenuItem.Name = "generatePrerequisiteFilesToolStripMenuItem";
-            generatePrerequisiteFilesToolStripMenuItem.Size = new Size(217, 22);
-            generatePrerequisiteFilesToolStripMenuItem.Text = "Generate Pre-requisite Files";
-            generatePrerequisiteFilesToolStripMenuItem.Click += generatePrerequisiteFilesToolStripMenuItem_Click;
+            selectFromFiltersToolStripMenuItem.Name = "selectFromFiltersToolStripMenuItem";
+            selectFromFiltersToolStripMenuItem.Size = new Size(217, 22);
+            selectFromFiltersToolStripMenuItem.Text = "Select files from filters";
+            selectFromFiltersToolStripMenuItem.Click += selectFromFiltersToolStripMenuItem_Click;
+            // 
+            // inputFilesInTextToolStripMenuItem
+            // 
+            inputFilesInTextToolStripMenuItem.Name = "inputFilesInTextToolStripMenuItem";
+            inputFilesInTextToolStripMenuItem.Size = new Size(217, 22);
+            inputFilesInTextToolStripMenuItem.Text = "Input files in Text";
+            inputFilesInTextToolStripMenuItem.Click += inputFilesInTextToolStripMenuItem_Click;
             // 
             // addNewFilesToolStripMenuItem
             // 
@@ -113,11 +110,40 @@ namespace DepIdentifier
             addNewFilesToolStripMenuItem.Text = "Add new files";
             addNewFilesToolStripMenuItem.Click += addNewFilesToolStripMenuItem_Click;
             // 
+            // removeFilesToolStripMenuItem
+            // 
+            removeFilesToolStripMenuItem.Name = "removeFilesToolStripMenuItem";
+            removeFilesToolStripMenuItem.Size = new Size(217, 22);
+            removeFilesToolStripMenuItem.Text = "Remove files";
+            removeFilesToolStripMenuItem.Click += removeFilesToolStripMenuItem_Click;
+            // 
+            // generatePrerequisiteFilesToolStripMenuItem
+            // 
+            generatePrerequisiteFilesToolStripMenuItem.Name = "generatePrerequisiteFilesToolStripMenuItem";
+            generatePrerequisiteFilesToolStripMenuItem.Size = new Size(217, 22);
+            generatePrerequisiteFilesToolStripMenuItem.Text = "Generate Pre-requisite Files";
+            generatePrerequisiteFilesToolStripMenuItem.Click += generatePrerequisiteFilesToolStripMenuItem_Click;
+            // 
+            // showReferencesToolStripMenuItem
+            // 
+            showReferencesToolStripMenuItem.Name = "showReferencesToolStripMenuItem";
+            showReferencesToolStripMenuItem.Size = new Size(217, 22);
+            showReferencesToolStripMenuItem.Text = "Show References";
+            showReferencesToolStripMenuItem.Click += showReferencesToolStripMenuItem_Click;
+            // 
             // helpToolStripMenuItem
             // 
+            helpToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { aboutReversePatcherToolStripMenuItem });
             helpToolStripMenuItem.Name = "helpToolStripMenuItem";
             helpToolStripMenuItem.Size = new Size(44, 20);
             helpToolStripMenuItem.Text = "Help";
+            // 
+            // aboutReversePatcherToolStripMenuItem
+            // 
+            aboutReversePatcherToolStripMenuItem.Name = "aboutReversePatcherToolStripMenuItem";
+            aboutReversePatcherToolStripMenuItem.Size = new Size(190, 22);
+            aboutReversePatcherToolStripMenuItem.Text = "About ReversePatcher";
+            aboutReversePatcherToolStripMenuItem.Click += aboutReversePatcherToolStripMenuItem_Click;
             // 
             // FilterCombo
             // 
@@ -192,7 +218,7 @@ namespace DepIdentifier
             // FilesList
             // 
             FilesList.AutoSize = true;
-            FilesList.Location = new Point(11, 51);
+            FilesList.Location = new Point(12, 52);
             FilesList.Name = "FilesList";
             FilesList.Size = new Size(194, 14);
             FilesList.TabIndex = 12;
@@ -269,6 +295,16 @@ namespace DepIdentifier
             RPProgressBar.TabIndex = 20;
             RPProgressBar.Visible = false;
             // 
+            // RemoveFilesBtn
+            // 
+            RemoveFilesBtn.Location = new Point(718, 50);
+            RemoveFilesBtn.Name = "RemoveFilesBtn";
+            RemoveFilesBtn.Size = new Size(125, 26);
+            RemoveFilesBtn.TabIndex = 21;
+            RemoveFilesBtn.Text = "Remove Files";
+            RemoveFilesBtn.UseVisualStyleBackColor = true;
+            RemoveFilesBtn.Click += RemoveFilesBtn_Click;
+            // 
             // ReversePatcher
             // 
             AutoScaleDimensions = new SizeF(96F, 96F);
@@ -277,6 +313,7 @@ namespace DepIdentifier
             AutoSize = true;
             BackColor = SystemColors.ButtonFace;
             ClientSize = new Size(1380, 859);
+            Controls.Add(RemoveFilesBtn);
             Controls.Add(RPProgressBar);
             Controls.Add(AddFilesRichTextBox);
             Controls.Add(FilterLabel);
@@ -342,7 +379,6 @@ namespace DepIdentifier
         #endregion
 
         private MenuStrip menuStrip1;
-        private ToolStripMenuItem fileToolStripMenuItem;
         private ToolStripMenuItem toolsToolStripMenuItem;
         private ToolStripMenuItem helpToolStripMenuItem;
         private ComboBox FilterCombo;
@@ -362,7 +398,12 @@ namespace DepIdentifier
         private Label FilterLabel;
         private ToolStripMenuItem addNewFilesToolStripMenuItem;
         private RichTextBox AddFilesRichTextBox;
-        private ToolStripMenuItem selectFromProjectToolStripMenuItem;
         private ProgressBar RPProgressBar;
+        private ToolStripMenuItem removeFilesToolStripMenuItem;
+        private ToolStripMenuItem selectFromFiltersToolStripMenuItem;
+        private ToolStripMenuItem inputFilesInTextToolStripMenuItem;
+        private Button RemoveFilesBtn;
+        private ToolStripMenuItem aboutReversePatcherToolStripMenuItem;
+        private ToolStripMenuItem showReferencesToolStripMenuItem;
     }
 }

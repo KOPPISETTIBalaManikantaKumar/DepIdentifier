@@ -31,6 +31,14 @@ namespace DepIdentifier
                 {
                     dependentFiles = XMLHelperAPIs.FindDependenciesInADOtHCppAndRCFileAndAddtoXml(filePath, folder, filesListXMLPath);
                 }
+                else if (string.Compare(Path.GetExtension(filePath), ".c", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    dependentFiles = XMLHelperAPIs.FindDependenciesInADOtHCppAndRCFileAndAddtoXml(filePath, folder, filesListXMLPath);
+                }
+                else if (string.Compare(Path.GetExtension(filePath), ".rc", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    dependentFiles = XMLHelperAPIs.FindDependenciesInADOtHCppAndRCFileAndAddtoXml(filePath, folder, filesListXMLPath);
+                }
                 else if (string.Compare(Path.GetExtension(filePath), ".vcxproj", StringComparison.OrdinalIgnoreCase) == 0 && !(filePath.Contains("409")))
                 {
                     dependentFiles = XMLHelperAPIs.FindVcxprojDependenciesAndAddToXml(filePath, folder, filesListXMLPath);
@@ -42,10 +50,6 @@ namespace DepIdentifier
                 else if (string.Compare(Path.GetExtension(filePath), ".csproj", StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     dependentFiles = XMLHelperAPIs.FindCSProjDependenciesAndAddToXml(filePath, folder, filesListXMLPath);
-                }
-                else if (string.Compare(Path.GetExtension(filePath), ".rc", StringComparison.OrdinalIgnoreCase) == 0)
-                {
-                    dependentFiles = XMLHelperAPIs.FindDependenciesInADOtHCppAndRCFileAndAddtoXml(filePath, folder, filesListXMLPath);
                 }
                 else if (string.Compare(Path.GetExtension(filePath), ".lst", StringComparison.OrdinalIgnoreCase) == 0)
                 {
@@ -127,11 +131,14 @@ namespace DepIdentifier
                 foreach (Match match in finalMacthCollection)
                 {
                     string fileName = match.Groups[1].Value;
-                    if (DepIdentifierUtils.IsValidFilenameWithExtension(fileName) && !DepIdentifierUtils.IsCommonFile(fileName) && !fileName.EndsWith("_i.c", StringComparison.OrdinalIgnoreCase))
+                    if (!fileName.StartsWith("//"))
                     {
-                        if (!dependentFiles.Contains(fileName))
+                        if (DepIdentifierUtils.IsValidFilenameWithExtension(fileName) && !DepIdentifierUtils.IsCommonFile(fileName) && !fileName.EndsWith("_i.c", StringComparison.OrdinalIgnoreCase))
                         {
-                            dependentFiles.Add(fileName);
+                            if (!dependentFiles.Contains(fileName))
+                            {
+                                dependentFiles.Add(fileName);
+                            }
                         }
                     }
                 }
@@ -486,7 +493,7 @@ namespace DepIdentifier
             return dependentListSemiColonSeperated;
         }
 
-        public void GetFileDependenciesRecursively(List<string> m_filesForWhichDependenciesNeedToBeIdentified)
+        public void GetFileDependenciesRecursively(List<string> m_filesForWhichDependenciesNeedToBeIdentified, bool isRecomuteChecked = false)
         {
             List<string> currentListOfFilesDependencies = new List<string>();
             foreach (var file in m_filesForWhichDependenciesNeedToBeIdentified)
@@ -498,7 +505,7 @@ namespace DepIdentifier
 
                 string currentFileFilter = DepIdentifierUtils.GetCurrentFilterFromFilePath(file);
                 FileDepIdentifier fileDepIdentifier = new FileDepIdentifier();
-                List<string> dependenicesOfCurrentFile = fileDepIdentifier.GetDependencyDataOfGivenFile(file, currentFileFilter: currentFileFilter);
+                List<string> dependenicesOfCurrentFile = fileDepIdentifier.GetDependencyDataOfGivenFile(file, isRecomuteChecked, currentFileFilter: currentFileFilter);
 
                 currentListOfFilesDependencies.AddRange(dependenicesOfCurrentFile);
 
@@ -513,7 +520,7 @@ namespace DepIdentifier
                 if (dependenicesOfCurrentFile.Count > 0)
                 {
                     if (string.Compare("No Dependencies", dependenicesOfCurrentFile[0], StringComparison.OrdinalIgnoreCase) != 0)
-                        GetFileDependenciesRecursively(dependenicesOfCurrentFile);
+                        GetFileDependenciesRecursively(dependenicesOfCurrentFile, isRecomuteChecked);
                 }
             }
         }
